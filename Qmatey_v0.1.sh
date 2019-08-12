@@ -52,8 +52,8 @@ mkdir genus_level
 echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n QMatey is compiling the host reference genome \n \n------------------------------------------------------------------------------${WHITE}"
 cd $ref_dir
 cat *.fa* > master_ref.fasta
-$tool_dir/bwa-0.7.17/bwa index -a bwtsw master_ref.fasta 
-java -jar $tool_dir/picard-2.18.27.jar CreateSequenceDictionary REFERENCE=master_ref.fasta    OUTPUT=master_ref.dict 
+$tool_dir/bwa-0.7.17/bwa index -a bwtsw master_ref.fasta &>/dev/null
+java -jar $tool_dir/picard-2.18.27.jar CreateSequenceDictionary REFERENCE=master_ref.fasta    OUTPUT=master_ref.dict &>/dev/null 
 $tool_dir/samtools-1.9/samtools faidx master_ref.fasta 
 #################################################################################################################
 #Perform alignment of sample reads to host reference genome
@@ -62,8 +62,8 @@ cd $input_dir
 for i in $(ls *.fa*); do
 	$tool_dir/bwa-0.7.17/bwa mem -t $threads $ref_dir/master_ref.fasta $i > $proj_dir/metagenome/${i%.fa*}.sam && \
 	java -XX:ParallelGCThreads=$threads -jar $tool_dir/picard-2.18.27.jar SortSam I= $proj_dir/metagenome/${i%.fa*}.sam O= $proj_dir/metagenome/${i%.fa*}.bam SORT_ORDER=coordinate && \
-	rm $proj_dir/metagenome/${i%.fa*}.sam
-done
+	rm $proj_dir/metagenome/${i%.fa*}.sam 
+done &>/dev/null
 #################################################################################################################
 #Extract unmatched (probably mostly microbiome) reads
 echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n QMatey is identifying metagenomic reads \n \n------------------------------------------------------------------------------${WHITE}"
@@ -72,7 +72,7 @@ for i in $(ls *.bam); do
 	$tool_dir/samtools-1.9/samtools view -b -f4 $i > ${i%.*}_metagenome.bam && \
 	$tool_dir/samtools-1.9/samtools bam2fq ${i%.*}_metagenome.bam | gzip > ${i%.*}_metagenome.fastq.gz && \
 	rm ${i%.*}_metagenome.bam
-done
+done &>/dev/null
 ##################################################################################################################
 #Uses word count to determine total amount of starting sequences. This will be used to calculate coverage.
 echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n QMatey is calculating metagenomic coverage \n \n------------------------------------------------------------------------------"
@@ -198,15 +198,15 @@ rm *_sighits.txt *_nr_temp.txt
 
 #################################################################################################################
 #Combine all taxids for all files/individuals and perform single search against new_taxdump.
-awk '{gsub(/\t\t/,"\tNA\t"); print}' $ranked_lineage_dir/rankedlineage.dmp | awk '{gsub(/[|]/,""); print}' | awk '{gsub(/\t\t/,"\t"); print}' > $ranked_lineage_dir/rankedlineage_tabdelimited.dmp
+awk '{gsub(/\t\t/,"\tNA\t"); print}' $tool_dir/rankedlineage.dmp | awk '{gsub(/[|]/,""); print}' | awk '{gsub(/\t\t/,"\t"); print}' > $tool_dir/rankedlineage_tabdelimited.dmp
 echo $'tax_id\ttaxname\tspecies\tgenus\tfamily\torder\tclass\tphylum\tkingdom\tsuperkingdom\t' | \
-cat - $ranked_lineage_dir/rankedlineage_tabdelimited.dmp > $ranked_lineage_dir/rankedlineage_edited.dmp
-rm $ranked_lineage_dir/rankedlineage_tabdelimited.dmp
+cat - $tool_dir/rankedlineage_tabdelimited.dmp > $tool_dir/rankedlineage_edited.dmp
+rm $tool_dir/rankedlineage_tabdelimited.dmp
 
 cd $proj_dir/metagenome/sighits/sighits_strain
 find . -type f -name '*_sighits_nr.txt' -exec cat {} + > sighits.txt
 awk '{print $11}' sighits.txt | awk '{gsub(";","\n"); print}' | sort -u -n | sed -e '1s/staxids/tax_id/' > taxids_sighits.txt && rm sighits.txt
-awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}'  $ranked_lineage_dir/rankedlineage_edited.dmp taxids_sighits.txt | \
+awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}'  $tool_dir/rankedlineage_edited.dmp taxids_sighits.txt | \
 awk '{gsub(/ /,"_"); print }' > rankedlineage_subhits.txt 
 
 rm taxids_sighits.txt
@@ -292,7 +292,7 @@ cd $proj_dir/metagenome/sighits/sighits_species
 #N=$threads
 for i in $(ls *_taxids_dup.txt);do
 	#((t=t%N)); ((t++==0)) && wait
-	awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' $ranked_lineage_dir/rankedlineage_edited.dmp $i > ${i%_taxids_dup*}_dup_inter.txt #&
+	awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' $tool_dir/rankedlineage_edited.dmp $i > ${i%_taxids_dup*}_dup_inter.txt #&
 done
 
 
@@ -344,7 +344,7 @@ rm *_final.txt && rm *_sighits_temp.txt
 cd $proj_dir/metagenome/sighits/sighits_species
 find . -type f -name '*_sighits.txt' -exec cat {} + > sighits.txt
 awk '{print $11}' sighits.txt | awk '{gsub(";","\n"); print}' | sort -u -n | sed -e '1s/staxids/tax_id/' > taxids_sighits.txt && rm sighits.txt
-awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}'  $ranked_lineage_dir/rankedlineage_edited.dmp taxids_sighits.txt | \
+awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}'  $tool_dir/rankedlineage_edited.dmp taxids_sighits.txt | \
 awk '{gsub(/ /,"_"); print }' > rankedlineage_subhits.txt 
 
 rm taxids_sighits.txt
@@ -431,7 +431,7 @@ cd $proj_dir/metagenome/sighits/sighits_genus
 #N=$threads
 for i in $(ls *_taxids_dup.txt);do
 	#((t=t%N)); ((t++==0)) && wait
-	awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' $ranked_lineage_dir/rankedlineage_edited.dmp $i > ${i%_taxids_dup*}_dup_inter.txt #&
+	awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' $tool_dir/rankedlineage_edited.dmp $i > ${i%_taxids_dup*}_dup_inter.txt #&
 done
 
 
@@ -486,7 +486,7 @@ rm *_final.txt && rm *_sighits_temp.txt
 cd $proj_dir/metagenome/sighits/sighits_genus
 find . -type f -name '*_sighits.txt' -exec cat {} + > sighits.txt
 awk '{print $11}' sighits.txt | awk '{gsub(";","\n"); print}' | sort -u -n | sed -e '1s/staxids/tax_id/' > taxids_sighits.txt && rm sighits.txt
-awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}'  $ranked_lineage_dir/rankedlineage_edited.dmp taxids_sighits.txt | \
+awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}'  $tool_dir/rankedlineage_edited.dmp taxids_sighits.txt | \
 awk '{gsub(/ /,"_"); print }' > rankedlineage_subhits.txt 
 
 rm taxids_sighits.txt
