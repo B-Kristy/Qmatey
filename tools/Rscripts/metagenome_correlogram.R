@@ -8,6 +8,8 @@ library(ggcorrplot)
 library(reshape)
 library(stringr)
 
+commandArgs(trailingonly = FALSE)
+
 #Strain-Level Correlogram
 #setwd ("D:/Vbox_Shared/DC_gbs/metagenomes")
 for (i in c(5, 10)) {
