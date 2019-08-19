@@ -255,6 +255,11 @@ for i in {mean,uniq_reads,stderr}; do
 	awk 'NR==1{for(i=1;i<=NF;i++)b[$i]++&&a[i]}{for(i in a)$i="";gsub(" +"," ")}1' | awk '{gsub(/ /,"\t"); print }' > proj_taxainfo_${i}.txt
 done
 rm *_taxa_*
+################################################################################################################
+#Strain-level visualizations
+cd $proj_dir/metagenome/results/strain_level
+strain_level_input=proj_taxainfo_mean.txt
+Rscript $tool_dir/Rscripts/strain_level_corr.R $strain_level_input $percent_thresh
 
 ################################################################################################################
 echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n QMatey is performing species-level clustering \n \n------------------------------------------------------------------------------"
@@ -393,6 +398,12 @@ for i in {mean,uniq_reads,stderr}; do
 	awk 'NR==1{for(i=1;i<=NF;i++)b[$i]++&&a[i]}{for(i in a)$i="";gsub(" +"," ")}1' | awk '{gsub(/ /,"\t"); print }' > proj_taxainfo_${i}.txt
 done
 rm *_taxa_*
+
+################################################################################################################
+#Species-level visualizations
+cd $proj_dir/metagenome/results/species_level
+species_level_input=proj_taxainfo_mean.txt
+Rscript $tool_dir/Rscripts/species_level_corr.R $species_level_input $percent_thresh
 
 ################################################################################################################
 #Genus-level sighit identification
@@ -537,4 +548,7 @@ done
 rm *_taxa_*
 
 ################################################################################################################
+#Genus-level visualizations
+genus_level_input=proj_taxainfo_mean.txt
+Rscript $tool_dir/Rscripts/genus_level_corr.R $genus_level_input $percent_thresh
 
