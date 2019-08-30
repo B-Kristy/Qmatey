@@ -11,7 +11,7 @@ A taxonomic profiler capable of microbiome analysis designed by biologists.
 Clone or download the git repository to a desired location 
 
 ```
-$ git clone https://tararickman/QMatey.git
+$ git clone https://github.com/B-Kristy/Qmatey.git
 ```
 
 ## Dependencies
