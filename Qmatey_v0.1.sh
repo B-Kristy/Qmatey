@@ -3,7 +3,6 @@
 . $input
 YELLOW='\033[1;33m'
 WHITE='\033[1;37m'
-#tool_dir=$tool_dir
 proj_dir=${input%/*}
 
 if java -version; then
@@ -26,9 +25,6 @@ fi
 [ -d "$input_dir" ] || { echo -e "$input_dir \e[31mnot found, exiting"; exit 1; }
 [ -d "$proj_dir" ] || { echo -e "$proj_dir \e[31mnot found, exiting"; exit 1; }
 [ -d "$ref_dir" ] || { echo -e "$ref_dir \e[31mnot found, exiting"; exit 1; }
-#[ -d "$db_dir" ] || { echo -e "$db_dir \e[31mnot found, exiting"; exit 1; }
-#[ -f "$normfactor" ] || { echo -e "$normfactor \e[31mnot found, exiting"; exit 1; }
-
 ##################################################################################################################
 #Create all necessary subdirectories for downstream processing
 cd $proj_dir
@@ -49,7 +45,7 @@ mkdir species_level
 mkdir genus_level
 #################################################################################################################
 #Make dictionary of host reference genome
-echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n QMatey is compiling the host reference genome \n \n------------------------------------------------------------------------------${WHITE}"
+echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n Qmatey is compiling the host reference genome \n \n------------------------------------------------------------------------------${WHITE}"
 cd $ref_dir
 cat *.fa* > master_ref.fasta
 $tool_dir/bwa-0.7.17/bwa index -a bwtsw master_ref.fasta &>/dev/null
@@ -57,7 +53,7 @@ java -jar $tool_dir/picard-2.18.27.jar CreateSequenceDictionary REFERENCE=master
 $tool_dir/samtools-1.9/samtools faidx master_ref.fasta 
 #################################################################################################################
 #Perform alignment of sample reads to host reference genome
-echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n QMatey is aligning raw reads to the reference genome \n \n------------------------------------------------------------------------------${WHITE}"
+echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n Qmatey is aligning raw reads to the reference genome \n \n------------------------------------------------------------------------------${WHITE}"
 cd $input_dir
 for i in $(ls *.fa*); do
 	$tool_dir/bwa-0.7.17/bwa mem -t $threads $ref_dir/master_ref.fasta $i > $proj_dir/metagenome/${i%.fa*}.sam && \
@@ -66,7 +62,7 @@ for i in $(ls *.fa*); do
 done &>/dev/null
 #################################################################################################################
 #Extract unmatched (probably mostly microbiome) reads
-echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n QMatey is identifying metagenomic reads \n \n------------------------------------------------------------------------------${WHITE}"
+echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n Qmatey is identifying metagenomic reads \n \n------------------------------------------------------------------------------${WHITE}"
 cd $proj_dir/metagenome
 for i in $(ls *.bam); do
 	$tool_dir/samtools-1.9/samtools view -b -f4 $i > ${i%.*}_metagenome.bam && \
@@ -75,7 +71,7 @@ for i in $(ls *.bam); do
 done &>/dev/null
 ##################################################################################################################
 #Uses word count to determine total amount of starting sequences. This will be used to calculate coverage.
-echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n QMatey is calculating metagenomic coverage \n \n------------------------------------------------------------------------------"
+echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n Qmatey is calculating metagenomic coverage \n \n------------------------------------------------------------------------------"
 
 cd $proj_dir/metagenome
 for i in $(ls *.fastq.gz); do
@@ -104,7 +100,7 @@ cp seqcov.txt ./genus_level
 rm  *_seq.txt && rm *tempcov.txt && rm *_seqcov.txt
 ##################################################################################################################
 #Compares unmatched microbiome (metagenome) reads to the master reference (host genomes) to calculate coverage normalization factor
-echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n QMatey is calculating a host-coverage normalization factor \n \n------------------------------------------------------------------------------"
+echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n Qmatey is calculating a host-coverage normalization factor \n \n------------------------------------------------------------------------------"
 cd $proj_dir/metagenome
 touch host_coverage.txt
 touch empty_host_coverage.txt
@@ -126,13 +122,12 @@ join host_coverage.txt microbiome_coverage.txt > coverage_normalize.txt
 average=$(awk '{ total += $2 } END { print total/NR }' coverage_normalize.txt)
 awk -v average=$average '{print $1,$2/average}' coverage_normalize.txt > coverage_normalization_factor.txt
 rm empty* && rm hold* && rm append* && rm host* && rm microbiome*
-
 #################################################################################################################
 #Processes fastq input (metagenomic reads) files into fasta format for further processing
 cd $proj_dir/metagenome
 for i in $(ls *_metagenome.fastq.gz); do
 	gunzip -k $i && mv ${i%_meta*}_metagenome.fastq ./haplotig/${i%_meta*}_metagenome.fastq && cd ./haplotig
-	awk 'NR%2==0' ${i%_meta*}_metagenome.fastq | awk 'NR%2==1' | sort | uniq -c | tr -s ' ' '\t' | awk '$0=">hseqid_"NR$0' | awk '$2>"1"' > ${i%_meta*}_cov_haplotig.txt
+	awk 'NR%2==0' ${i%_meta*}_metagenome.fastq | awk 'NR%2==1' | sort | uniq -c | tr -s ' ' '\t' | awk '$0=">hseqid_"NR$0' | awk '$2>"0"' > ${i%_meta*}_cov_haplotig.txt
 	awk '{print $1"\t"$2}' ${i%_meta*}_cov_haplotig.txt | awk  'gsub(">", "", $0)' > ${i%_meta*}_haplocov.txt
 	awk '{print $1"\n"$3}' ${i%_meta*}_cov_haplotig.txt > ${i%_meta*}_haplotig.fasta
 	rm ${i%_meta*}_metagenome.fastq && rm ${i%_meta*}_cov_haplotig.txt && cd $proj_dir/metagenome
@@ -151,7 +146,6 @@ for i in $(ls *_haplocov.txt);do
 	internalnormfactor=$(awk -v id=$id '$1 == id {print $2}' ../coverage_normalization_factor.txt)
 	awk -v internalnormfactor=$internalnormfactor '{print $1,$2 * internalnormfactor}' ${i%_haplocov*}_libnormalized.txt | awk 'gsub(" ", "\t", $0)' > ${i%_haplocov*}_normalized.txt
 done
-
 ##################################################################################################################
 #install blast ### https://www.exoscale.com/syslog/blast/
 #permanently set environment’s PATH variable: "export PATH=$PATH:/home/bode/ncbi-blast-2.8.1+/bin/"
@@ -159,14 +153,13 @@ done
 #updatde database ### email="my email address here" ncbi-blast-dbs 16SMicrobial nt taxdump
 #specify blast output format ### http://www.metagenomics.wiki/tools/blast/blastn-output-format-6
 #download new_taxdump.tar.gz https://ncbiinsights.ncbi.nlm.nih.gov/2018/02/22/new-taxonomy-files-available-with-lineage-type-and-host-information/
-echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n QMatey is performing BLAST \n \n------------------------------------------------------------------------------"
+echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n Qmatey is performing BLAST \n \n------------------------------------------------------------------------------"
 cd $proj_dir/metagenome/haplotig
 for i in $(ls *_haplotig.fasta);do
 	$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $db_dir -num_threads $threads -evalue 1e-10 -max_target_seqs 5 -outfmt \
 	"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" \
 	-out ../alignment/${i%_haplotig*}_haplotig.megablast
 done
-
 ##################################################################################################################
 #Removes duplicate rows and redundant hits from *_haplotig.megablast
 cd $proj_dir/metagenome/alignment
@@ -174,10 +167,9 @@ for i in $(ls *_haplotig.megablast);do
 	sort -u $i > ${i%_haplotig*}_haplotig_nd.megablast
 done
 rm *_haplotig.megablast
-
 ##################################################################################################################
 #Strain-level sighit identification
-echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n QMatey is performing strain-level clustering \n \n------------------------------------------------------------------------------"
+echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n Qmatey is performing strain-level clustering \n \n------------------------------------------------------------------------------"
 cd $proj_dir/metagenome/alignment
 for i in $(ls *_haplotig_nd.megablast);do
 	awk '$6>=100' $i | awk '$7>=100' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_strain/${i%_haplotig*}_filter.txt
@@ -185,7 +177,6 @@ for i in $(ls *_haplotig_nd.megablast);do
 	awk '{print $12,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11}' | awk 'gsub(" ","\t",$0)' > ../sighits/sighits_strain/${i%_haplotig*}_sighits.txt
 done
 rm ../sighits/sighits_strain/*_filter.txt 
-
 ##################################################################################################################
 #Removes unique reads that match multiple subjects and adds headers to each column
 cd $proj_dir/metagenome/sighits/sighits_strain
@@ -195,7 +186,6 @@ for i in $(ls *_sighits.txt);do
 	cat - ${i%.txt}_nr_temp.txt > ${i%.txt}_nr.txt
 done
 rm *_sighits.txt *_nr_temp.txt
-
 #################################################################################################################
 #Combine all taxids for all files/individuals and perform single search against new_taxdump.
 awk '{gsub(/\t\t/,"\tNA\t"); print}' $tool_dir/rankedlineage.dmp | awk '{gsub(/[|]/,""); print}' | awk '{gsub(/\t\t/,"\t"); print}' > $tool_dir/rankedlineage_tabdelimited.dmp
@@ -210,7 +200,6 @@ awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}'  $tool_dir/rankedlineage_edi
 awk '{gsub(/ /,"_"); print }' > rankedlineage_subhits.txt 
 
 rm taxids_sighits.txt
-
 #################################################################################################################
 #Install datamash
 #Generate file with mean, number of unique reads per taxID, and standard error
@@ -233,7 +222,6 @@ for i in $(ls *_sighits_nr.txt); do
 	awk '{print $1,$2,$3,$4,$6,$7,$8,$9,$10,$11,$12,$13,$14 }' stats3.txt | awk '{gsub(/ /,"\t"); print }' > ${i%_sighits*}_taxastats.txt
 	rm *stats1* *stats2* *stats3* *hold*
 done
-
 #################################################################################################################
 #Calculates percent coverage of sighits from unmatched microbiome input files
 cd $proj_dir/metagenome/results/strain_level
@@ -247,7 +235,6 @@ awk '{for (i=1; i<=NF; i++) sum[i]+=$i;}; END{for (i in sum) print sum[i];}' tem
 awk '{sum+=$1}END{print sum}' temp_uniq_mean_3.txt > mean_uniq.txt
 paste mean_uniq.txt seqcov.txt | awk '{print(($1/$2)* 100)}' > proj_percent_coverage.txt
 rm *temp* *mean_uniq*
-
 ################################################################################################################
 cd $proj_dir/metagenome/results/strain_level
 for i in {mean,uniq_reads,stderr}; do
@@ -259,10 +246,10 @@ rm *_taxa_*
 #Strain-level visualizations
 cd $proj_dir/metagenome/results/strain_level
 strain_level_input=proj_taxainfo_mean.txt
-Rscript $tool_dir/Rscripts/strain_level_corr.R $strain_level_input $percent_thresh
-
+percent_thresh=$percent_thresh
+Rscript $tool_dir/Rscripts/strain_level_corr.R $strain_level_input $percent_thresh &>/dev/null
 ################################################################################################################
-echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n QMatey is performing species-level clustering \n \n------------------------------------------------------------------------------"
+echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n Qmatey is performing species-level clustering \n \n------------------------------------------------------------------------------"
 #Species-level sighit identification
 cd $proj_dir/metagenome/alignment
 for i in $(ls *_haplotig_nd.megablast);do
@@ -271,7 +258,6 @@ for i in $(ls *_haplotig_nd.megablast);do
 	awk '{print $12,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11}' | awk 'gsub(" ","\t",$0)' > ../sighits/sighits_species/${i%_haplotig*}_sighits.txt
 done
 rm ../sighits/sighits_species/*_filter.txt 
-
 ################################################################################################################
 #Extracts non-redundant hits for unique alignment
 cd $proj_dir/metagenome/sighits/sighits_species/
@@ -284,14 +270,12 @@ cd $proj_dir/metagenome/sighits/sighits_species
 for i in $(ls *_sighits.txt);do
 	awk -F'|' 'FNR==NR{a[$1,$2]=1; next}  !a[$1,$2]' ${i%_sighits*}_genus.txt_unique.txt $i > ${i%_sighits*}_dup.txt
 done
-
 ################################################################################################################
 #Appends taxa informations to the duplicate sighits file
 cd $proj_dir/metagenome/sighits/sighits_species
 for i in $(ls *_dup.txt);do
 	awk '{print $11}' $i > ${i%_dup*}_taxids_dup.txt
 done
-
 ################################################################################################################
 cd $proj_dir/metagenome/sighits/sighits_species
 #N=$threads
@@ -317,7 +301,6 @@ for i in $(ls *_dup_reads.txt);do
 	awk '{ for(i=1;i<=NF;i++){if(i==NF){printf("%s\n",$NF);}else {printf("%s\t",$i)}}}' $i > ${i%_dup_reads*}_duplicates.txt
 done
 rm *_reads.txt
-
 #################################################################################################################
 #species-level clustering
 #N=$threads
@@ -353,7 +336,6 @@ awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}'  $tool_dir/rankedlineage_edi
 awk '{gsub(/ /,"_"); print }' > rankedlineage_subhits.txt 
 
 rm taxids_sighits.txt
-
 #################################################################################################################
 #Install datamash
 #Generate file with mean, number of unique reads per taxID, and standard error
@@ -376,7 +358,6 @@ for i in $(ls *_sighits.txt); do
 	awk '{print $1,$2,$3,$4,$6,$7,$8,$9,$10,$11,$12,$13,$14 }' stats3.txt | awk '{gsub(/ /,"\t"); print }' > ${i%_sighits*}_taxastats.txt
 	rm *stats1* *stats2* *stats3* *hold*
 done
-
 #################################################################################################################
 #Calculates percent coverage of sighits from unmatched microbiome input files
 cd $proj_dir/metagenome/results/species_level/
@@ -390,7 +371,6 @@ awk '{for (i=1; i<=NF; i++) sum[i]+=$i;}; END{for (i in sum) print sum[i];}' tem
 awk '{sum+=$1}END{print sum}' temp_uniq_mean_3.txt > mean_uniq.txt
 paste mean_uniq.txt seqcov.txt | awk '{print(($1/$2)* 100)}' > proj_percent_coverage.txt
 rm *temp* *mean_uniq*
-
 ################################################################################################################
 cd $proj_dir/metagenome/results/species_level
 for i in {mean,uniq_reads,stderr}; do
@@ -398,16 +378,15 @@ for i in {mean,uniq_reads,stderr}; do
 	awk 'NR==1{for(i=1;i<=NF;i++)b[$i]++&&a[i]}{for(i in a)$i="";gsub(" +"," ")}1' | awk '{gsub(/ /,"\t"); print }' > proj_taxainfo_${i}.txt
 done
 rm *_taxa_*
-
 ################################################################################################################
 #Species-level visualizations
 cd $proj_dir/metagenome/results/species_level
 species_level_input=proj_taxainfo_mean.txt
-Rscript $tool_dir/Rscripts/species_level_corr.R $species_level_input $percent_thresh
-
+percent_thresh=$percent_thresh
+Rscript $tool_dir/Rscripts/species_level_corr.R $species_level_input $percent_thresh &>/dev/null
 ################################################################################################################
 #Genus-level sighit identification
-echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n QMatey is performing genus-level clustering \n \n------------------------------------------------------------------------------"
+echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n Qmatey is performing genus-level clustering \n \n------------------------------------------------------------------------------"
 cd $proj_dir/metagenome/alignment
 for i in $(ls *_haplotig_nd.megablast);do
 	awk '$6>=90' $i | awk '$7>=90' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_genus/${i%_haplotig*}_filter.txt
@@ -415,28 +394,24 @@ for i in $(ls *_haplotig_nd.megablast);do
 	awk '{print $12,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11}' | awk 'gsub(" ","\t",$0)' > ../sighits/sighits_genus/${i%_haplotig*}_sighits.txt
 done
 rm ../sighits/sighits_genus/*_filter.txt 
-
 ################################################################################################################
 #Extracts non-redundant hits for unique alignment
 cd $proj_dir/metagenome/sighits/sighits_genus/
 for i in $(ls *_sighits.txt);do
 	awk '{a[$2]++;b[$2]=$0}END{for(x in a)if(a[x]==1)print b[x]}' $i > ${i%_sighits*}_genus.txt_unique.txt
 done
-
 ################################################################################################################
 #Extracts duplicate hits for multi-alignment 
 cd $proj_dir/metagenome/sighits/sighits_genus
 for i in $(ls *_sighits.txt);do
 	awk -F'|' 'FNR==NR{a[$1,$2]=1; next}  !a[$1,$2]' ${i%_sighits*}_genus.txt_unique.txt $i > ${i%_sighits*}_dup.txt
 done
-
 ################################################################################################################
 #Appends taxa informations to the duplicate sighits file
 cd $proj_dir/metagenome/sighits/sighits_genus
 for i in $(ls *_dup.txt);do
 	awk '{print $11}' $i > ${i%_dup*}_taxids_dup.txt
 done
-
 ################################################################################################################
 cd $proj_dir/metagenome/sighits/sighits_genus
 #N=$threads
@@ -462,7 +437,6 @@ for i in $(ls *_dup_reads.txt);do
 	awk '{ for(i=1;i<=NF;i++){if(i==NF){printf("%s\n",$NF);}else {printf("%s\t",$i)}}}' $i > ${i%_dup_reads*}_duplicates.txt
 done
 rm *_reads.txt
-
 ################################################################################################################
 #Genus-level clustering
 cd $proj_dir/metagenome/sighits/sighits_genus
@@ -491,7 +465,6 @@ for i in $(ls *_final.txt);do
 done
 
 rm *_final.txt && rm *_sighits_temp.txt
-
 #################################################################################################################
 #Combine all taxids for all files/individuals and perform single search against new_taxdump.
 cd $proj_dir/metagenome/sighits/sighits_genus
@@ -501,7 +474,6 @@ awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}'  $tool_dir/rankedlineage_edi
 awk '{gsub(/ /,"_"); print }' > rankedlineage_subhits.txt 
 
 rm taxids_sighits.txt
-
 #################################################################################################################
 #Install datamash
 #Generate file with mean, number of unique reads per taxID, and standard error
@@ -524,7 +496,6 @@ for i in $(ls *_sighits.txt); do
 	awk '{print $1,$2,$3,$4,$6,$7,$8,$9,$10,$11,$12,$13,$14 }' stats3.txt | awk '{gsub(/ /,"\t"); print }' > ${i%_sighits*}_taxastats.txt
 	rm *stats1* *stats2* *stats3* *hold*
 done
-
 #################################################################################################################
 #Calculates percent coverage of sighits from unmatched microbiome input files
 cd $proj_dir/metagenome/results/genus_level
@@ -538,7 +509,6 @@ awk '{for (i=1; i<=NF; i++) sum[i]+=$i;}; END{for (i in sum) print sum[i];}' tem
 awk '{sum+=$1}END{print sum}' temp_uniq_mean_3.txt > mean_uniq.txt
 paste mean_uniq.txt seqcov.txt | awk '{print(($1/$2)* 100)}' > proj_percent_coverage.txt
 rm *temp* *mean_uniq*
-
 ################################################################################################################
 cd $proj_dir/metagenome/results/genus_level
 for i in {mean,uniq_reads,stderr}; do
@@ -546,9 +516,8 @@ for i in {mean,uniq_reads,stderr}; do
 	awk 'NR==1{for(i=1;i<=NF;i++)b[$i]++&&a[i]}{for(i in a)$i="";gsub(" +"," ")}1' | awk '{gsub(/ /,"\t"); print }' > proj_taxainfo_${i}.txt
 done
 rm *_taxa_*
-
 ################################################################################################################
 #Genus-level visualizations
 genus_level_input=proj_taxainfo_mean.txt
-Rscript $tool_dir/Rscripts/genus_level_corr.R $genus_level_input $percent_thresh
-
+percent_thresh=$percent_thresh
+Rscript $tool_dir/Rscripts/genus_level_corr.R $genus_level_input $percent_thresh &>/dev/null
