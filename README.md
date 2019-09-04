@@ -11,7 +11,7 @@ A taxonomic profiler capable of microbiome analysis designed by biologists.
 Clone or download the git repository to a desired location 
 
 ```
-$ git clone https://tararickman/QMatey.git
+$ git clone https://github.com/B-Kristy/Qmatey.git
 ```
 
 ## Dependencies
@@ -31,21 +31,22 @@ A project directory should contain the following sub-directories:
 * Configuration file
   * The format of the configuration file can be taken from the tools directory of the QMatey Repository. 
 ## Preparing A Database Directory 
-IF necessary, install the lftp tool to navigate NCBI's FTP site:
+If necessary, install the lftp tool to navigate NCBI's FTP site:
 ```
 sudo apt-get install lftp
 ```
 To obtain an NCBI sequencing database, go to the FTP site ftp://ftp.ncbi.nlm.nih.gov/blast/db/.
 Create a database directory and select the sequencing database from the FTP site you wish to obtain using the following commands: 
 ```
-cd $database_directory
-wget ftp ftp://ftp.ncbi.nlm.nih.gov/blast/db/nt.tar.gz
+mkdir database_directory
+cd database_directory
+wget ftp ftp://ftp.ncbi.nlm.nih.gov/blast/db/nt*.tar.gz
 ```
 In the above code, I am extracting all compressed files of the **nucleotide (nt) database** into my database directory. A complete sequencing database will require an extensive amount of space. 
 
-Next, uncompress the database files amd remove it with the following commands:
+Next, uncompress the database files and remove them with the following commands:
 ```
-tar -xzvf *nt.tar.gz
+tar -xzvf nt*.tar.gz
 rm *nt.tar.gz
 ```
 
