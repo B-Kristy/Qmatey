@@ -260,53 +260,60 @@ done
 rm ../sighits/sighits_species/*_filter.txt 
 ################################################################################################################
 #Extracts non-redundant hits for unique alignment
-cd $proj_dir/metagenome/sighits/sighits_species/
+cd /home/brandon/Desktop/Qmatey/examples/project1/metagenome/sighits/sighits_species/
 for i in $(ls *_sighits.txt);do
-	awk '{a[$2]++;b[$2]=$0}END{for(x in a)if(a[x]==1)print b[x]}' $i > ${i%_sighits*}_genus.txt_unique.txt
+	awk -F '\t' '{a[$2]++;b[$2]=$0}END{for(x in a)if(a[x]==1)print b[x]}' $i > ${i%_sighits*}_genus.txt_unique.txt
 done
 ################################################################################################################
 #Extracts duplicate hits for multi-alignment 
-cd $proj_dir/metagenome/sighits/sighits_species
+cd /home/brandon/Desktop/Qmatey/examples/project1/metagenome/sighits/sighits_species/
 for i in $(ls *_sighits.txt);do
-	awk -F'|' 'FNR==NR{a[$1,$2]=1; next}  !a[$1,$2]' ${i%_sighits*}_genus.txt_unique.txt $i > ${i%_sighits*}_dup.txt
+	awk -F '\t' 'FNR==NR{a[$1,$2]=1; next}  !a[$1,$2]' ${i%_sighits*}_genus.txt_unique.txt $i > ${i%_sighits*}_dup.txt
 done
 ################################################################################################################
 #Appends taxa informations to the duplicate sighits file
-cd $proj_dir/metagenome/sighits/sighits_species
+cd /home/brandon/Desktop/Qmatey/examples/project1/metagenome/sighits/sighits_species/
 for i in $(ls *_dup.txt);do
-	awk '{print $11}' $i > ${i%_dup*}_taxids_dup.txt
+	awk -F '\t' '{print $11}' $i > ${i%_dup*}_taxids_dup.txt
 done
 ################################################################################################################
-cd $proj_dir/metagenome/sighits/sighits_species
+cd /home/brandon/Desktop/Qmatey/examples/project1/metagenome/sighits/sighits_species/
 #N=$threads
 for i in $(ls *_taxids_dup.txt);do
 	#((t=t%N)); ((t++==0)) && wait
-	awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' $tool_dir/rankedlineage_edited.dmp $i > ${i%_taxids_dup*}_dup_inter.txt #&
+	awk -F '\t' 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' /home/brandon/Desktop/Qmatey/tools/rankedlineage_edited.dmp $i > ${i%_taxids_dup*}_dup_inter.txt #&
 done
 
 
 for i in $(ls *_dup_inter.txt);do
-	awk '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' $i > ${i%_dup_inter*}_dup.txt_dup_taxa.txt
+	awk -F '\t'  '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' $i > ${i%_dup_inter*}_dup.txt_dup_taxa.txt
 done
 
 rm *_taxids_dup.txt
 
-for i in $(ls *_dup.txt);do
-paste <(awk '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12}' $i ) <(awk '{print $1, $2, $3, $4, $5, $6, $7, $8, $9}' ${i%_dup_taxa.txt*}_dup_taxa.txt) > ${i%.txt}_reads.txt
+for i in $(ls *_dup_taxa.txt);do
+	awk -F '\t' '{print $1}' $i | awk -F ' ' '{print $1, $2}' > ${i%.}_species.txt
 done
+
+paste <(awk '{print $0}' OFS='\t' NKB13_dup.txt_dup_taxa.txt_species.txt) <(awk -F '\t' '{print $1, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' NKB13_dup.txt_dup_taxa.txt) | awk -F '\t' '{print $2, $1, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' > full_species.txt
+
+for i in $(ls *_dup.txt);do
+paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12}' OFS='\t' $i ) <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9}' OFS='\t' full_species.txt) > ${i%.txt}_reads.txt
+done
+
 
 rm *_dup_taxa.txt && rm *_dup_inter.txt && rm *_dup.txt
 
-for i in $(ls *_dup_reads.txt);do
-	awk '{ for(i=1;i<=NF;i++){if(i==NF){printf("%s\n",$NF);}else {printf("%s\t",$i)}}}' $i > ${i%_dup_reads*}_duplicates.txt
-done
-rm *_reads.txt
+#for i in $(ls *_reads.txt);do
+	#awk '{ for(i=1;i<=NF;i++){if(i==NF){printf("%s\n",$NF);}else {printf("%s\t",$i)}}}' $i > ${i%_dup_reads*}_duplicates.txt
+#done
+#rm *_reads.txt
 exit
 #################################################################################################################
 #species-level clustering
 #N=$threads
 cd /home/brandon/Desktop/Qmatey/examples/project1/metagenome/sighits/sighits_species/
-for i in $(ls *_duplicates.txt);do
+for i in $(ls *_reads.txt);do
 	#((t=t%N)); ((t++==0)) && wait
 	awk '{a[$2,$14]++;b[$2,$14]=$0}END{for(x in a)if(a[x]==1)print b[x]}' $i > ${i%_duplicates*}_multi_genus.txt #&
 done
