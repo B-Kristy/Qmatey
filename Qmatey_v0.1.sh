@@ -167,6 +167,7 @@ for i in $(ls *_haplotig.megablast);do
 	sort -u $i > ${i%_haplotig*}_haplotig_nd.megablast
 done
 rm *_haplotig.megablast
+
 ##################################################################################################################
 #Strain-level sighit identification
 echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n Qmatey is performing strain-level clustering \n \n------------------------------------------------------------------------------"

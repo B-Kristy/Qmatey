@@ -199,6 +199,11 @@ done
 rm *_multi_species_reads.txt && rm *_species_duplicates.txt && rm *_species_unique_reads.txt && rm *_species_errors.txt
 
 for i in $(ls *_complete_species_reads.txt);do
+	awk '{ k = $1 OFS $0}{ sum[k] += $1; count[k]++ } END{ for (i in sum) if (count[i] > 1) print i, sum[i] }' $i > test.txt
+done
+     					
+
+for i in $(ls *_complete_species_reads.txt);do
 	awk '{ for(i=1;i<=NF;i++){if(i==NF){printf("%s\n",$NF);}else {printf("%s\t",$i)}}}' $i > ${i%_complete_species_reads*}_sighits_temp.txt
 	echo $'abundance\tqseqid\tsseqid\tlength\tmismatch\tevalue\tpident\tqcovs\tqseq\tsseq\tstaxids\tstitle' | \
 	cat - ${i%_complete_species_reads*}_sighits_temp.txt > ${i%_complete_species_reads*}_sighits.txt
