@@ -160,6 +160,7 @@ for i in $(ls *_haplotig.fasta);do
 	"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" \
 	-out ../alignment/${i%_haplotig*}_haplotig.megablast
 done
+exit
 ##################################################################################################################
 #Removes duplicate rows and redundant hits from *_haplotig.megablast
 cd $proj_dir/metagenome/alignment
