@@ -93,19 +93,30 @@ rm *_species_taxid.txt && rm *_dup_inter.txt && rm *_dup.txt && rm *_species_col
 #################################################################################################################
 #species-level clustering
 for i in $(ls *_species_duplicates.txt);do
-	awk -F '\t' '{a[$2,$13]++;b[$2,$13]=$0}END{for(x in a)if(a[x]==5)print b[x]}' OFS='\t' $i > ${i%_species_duplicates*}_species_level_inter_duplicates.txt
-done
-#################################################################################################################
-for i in $(ls *_species_level_inter_duplicates.txt);do
-	awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12}' OFS='\t' $i > ${i%_species_level_inter_duplicates*}_multi_species_reads.txt
+	awk -F '\t' '{print $1, $2"~"$13, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $14, $15, $16, $17, $18, $19, $20, $21}' OFS='\t' $i > ${i%_species_duplicates*}_species_inter.txt
 done
 
-for i in $(ls *_multi_species_reads.txt);do
-	cat $i ${i%_multi_species_reads.txt}_species_unique_reads.txt > ${i%_multi_species_reads*}_complete_species_reads.txt
+for i in $(ls *_species_inter.txt);do
+	awk -F '\t' '{print $2, $1, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21}' OFS='\t' $i > ${i%_species_inter*}_species_inter2.txt
 done
 
-rm *_multi_species_reads.txt && rm *_species_duplicates.txt && rm *_species_level_inter_duplicates.txt && rm *_species_unique_reads.txt 
+for i in $(ls *_species_inter2.txt);do
+	awk -F '\t' '{dups[$1]++} END {for (num in dups) {print num}}' $i | sort -k1,1  > ${i%_species_inter2*}_duplicate_count.txt
+done
 
+for i in $(ls *_duplicate_count.txt);do
+	awk -F '~' '{a[$1]++;b[$1]=$0}END{for(x in a)if(a[x]==1)print b[x]}' $i | sort -k1,1 > ${i%_duplicate_count*}_multialign_species_reads.txt
+done
+
+for i in $(ls *_multialign_species_reads.txt);do
+	awk -F '\t'  'FNR==NR {a[$1]; next}; $1 in a' $i ${i%_multialign_species_reads*}_species_inter2.txt | sort -u -k1,1 | awk 'gsub("~","\t",$0)'| awk -F '\t' '{print $3, $1, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13}' OFS='\t' > ${i%_multialign_species_reads*}_species_OTU.txt
+done
+
+rm *_species_inter.txt && rm *_species_inter2.txt && rm *_duplicate_count.txt && rm *_multialign_species_reads.txt && rm *_species_duplicates.tx
+
+for i in $(ls *_species_OTU.txt);do
+	cat $i ${i%_species_OTU*}_species_unique_reads.txt > ${i%_species_OTU*}_complete_species_reads.txt
+done 
 
 for i in $(ls *_complete_species_reads.txt);do
 	awk '{ for(i=1;i<=NF;i++){if(i==NF){printf("%s\n",$NF);}else {printf("%s\t",$i)}}}' $i > ${i%_complete_species_reads*}_sighits_temp.txt
@@ -113,7 +124,7 @@ for i in $(ls *_complete_species_reads.txt);do
 	cat - ${i%_complete_species_reads*}_sighits_temp.txt > ${i%_complete_species_reads*}_sighits.txt
 done
 
-rm *_complete_species_reads.txt && rm *_sighits_temp.txt
+rm *_complete_species_reads.txt && rm *_sighits_temp.txt && rm *_species_OTU.txt && rm *_unique_reads.txt
 #################################################################################################################
 #Combine all taxids for all files/individuals and perform single search against new_taxdump.
 cd $proj_dir/metagenome/sighits/sighits_species
