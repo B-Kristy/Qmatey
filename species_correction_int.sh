@@ -100,8 +100,10 @@ for i in $(ls *_species_inter.txt);do
 	awk -F '\t' '{print $2, $1, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21}' OFS='\t' $i > ${i%_species_inter*}_species_inter2.txt
 done
 
+N=24
 for i in $(ls *_species_inter2.txt);do
-	awk -F '\t' '{dups[$1]++} END {for (num in dups) {print num}}' $i | sort -k1,1  > ${i%_species_inter2*}_duplicate_count.txt
+	((t=t%N)); ((t++==0)) && wait
+	awk -F '\t' '{dups[$1]++} END {for (num in dups) {print num}}' $i | sort -k1,1  > ${i%_species_inter2*}_duplicate_count.txt &
 done
 
 for i in $(ls *_duplicate_count.txt);do
