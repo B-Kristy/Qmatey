@@ -157,8 +157,9 @@ echo -e "${YELLOW}--------------------------------------------------------------
 cd $proj_dir/metagenome/haplotig
 for i in $(ls *_haplotig.fasta);do
 	$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $db_dir -num_threads $threads -evalue 1e-10 -max_target_seqs 5 -outfmt \
-	"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" \
+	"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids sskingdoms" \
 	-out ../alignment/${i%_haplotig*}_haplotig.megablast
+	## Remove superkingdom NA queries
 done
 exit
 ##################################################################################################################

@@ -61,11 +61,10 @@ done
 
 rm *_taxids_dup_inter.txt
 ################################################################################################################
+#Reformats taxonomic information to provide species-level taxa in the species column for duplicate reads
 cd $proj_dir/metagenome/sighits/sighits_species
-N=24
 for i in $(ls *_taxids_dup.txt);do
-	((t=t%N)); ((t++==0)) && wait
-	awk -F '\t' 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' /home/brandon/Desktop/Qmatey/tools/rankedlineage_edited.dmp OFS='\t' $i> ${i%_taxids_dup*}_dup_inter.txt &
+	awk -F '\t' 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' /home/brandon/Desktop/Qmatey/tools/rankedlineage_edited.dmp OFS='\t' $i> ${i%_taxids_dup*}_dup_inter.txt 
 done
 
 for i in $(ls *_dup_inter.txt);do
@@ -78,32 +77,31 @@ for i in $(ls *_species_taxid.txt);do
 	awk -F '\t' '{print $1}' $i | awk -F ' ' '{print $1, $2}' > ${i%_species_taxid*}_species_column.txt
 done
 
-
 for i in $(ls *_species_column.txt);do
 	paste <(awk '{print $0}' OFS='\t' $i) <(awk -F '\t' '{print $1, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' ${i%_species_column*}_species_taxid.txt) | awk -F '\t' '{print $2, $1, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' > ${i%_species_column*}_species_taxa.txt
 done
 
 for i in $(ls *_dup.txt);do
-	paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12}' OFS='\t' $i ) <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9}' OFS='\t' ${i%*_dup.txt}_species_taxa.txt) > ${i%_dup*}_species_duplicates.txt
+	paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12}' OFS='\t' $i ) <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9}' OFS='\t' ${i%*_dup.txt}_species_taxa.txt) > ${i%_dup*}_species_duplicates_virome.txt
 done
 
+for i in $(ls *_species_duplicates_virome.txt);do
+	awk -F '\t' '{ if ($21!="Viruses") print $0}' $i > ${i%*_species_duplicates_virome*}_species_duplicates.txt
+done
 
-
-rm *_species_taxid.txt && rm *_dup_inter.txt && rm *_dup.txt && rm *_species_column.txt && rm *_species_taxa.txt
+rm *_species_taxid.txt && rm *_dup_inter.txt && rm *_dup.txt && rm *_species_column.txt && rm *_species_taxa.txt && rm *_species_duplicates_virome.txt
 #################################################################################################################
 #species-level clustering
 for i in $(ls *_species_duplicates.txt);do
-	awk -F '\t' '{print $1, $2"~"$13, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $14, $15, $16, $17, $18, $19, $20, $21}' OFS='\t' $i > ${i%_species_duplicates*}_species_inter.txt
+	awk -F '\t' '{print $1, $2"~"$14, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $15, $16, $17, $18, $19, $20, $21}' OFS='\t' $i > ${i%_species_duplicates*}_species_inter.txt
 done
 
 for i in $(ls *_species_inter.txt);do
 	awk -F '\t' '{print $2, $1, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21}' OFS='\t' $i > ${i%_species_inter*}_species_inter2.txt
 done
 
-N=24
 for i in $(ls *_species_inter2.txt);do
-	((t=t%N)); ((t++==0)) && wait
-	awk -F '\t' '{dups[$1]++} END {for (num in dups) {print num}}' $i | sort -k1,1  > ${i%_species_inter2*}_duplicate_count.txt &
+	awk -F '\t' '{dups[$1]++} END {for (num in dups) {print num}}' $i | sort -k1,1  > ${i%_species_inter2*}_duplicate_count.txt 
 done
 
 for i in $(ls *_duplicate_count.txt);do
@@ -114,7 +112,7 @@ for i in $(ls *_multialign_species_reads.txt);do
 	awk -F '\t'  'FNR==NR {a[$1]; next}; $1 in a' $i ${i%_multialign_species_reads*}_species_inter2.txt | sort -u -k1,1 | awk 'gsub("~","\t",$0)'| awk -F '\t' '{print $3, $1, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13}' OFS='\t' > ${i%_multialign_species_reads*}_species_OTU.txt
 done
 
-rm *_species_inter.txt && rm *_species_inter2.txt && rm *_duplicate_count.txt && rm *_multialign_species_reads.txt && rm *_species_duplicates.tx
+rm *_species_inter.txt && rm *_species_inter2.txt && rm *_duplicate_count.txt && rm *_multialign_species_reads.txt && rm *_species_duplicates.txt
 
 for i in $(ls *_species_OTU.txt);do
 	cat $i ${i%_species_OTU*}_species_unique_reads.txt > ${i%_species_OTU*}_complete_species_reads.txt
@@ -213,55 +211,58 @@ done
 
 rm *_taxids_dup_inter.txt
 ################################################################################################################
-cd $proj_dir/metagenome/sighits/sighits_genus/
-#N=$threads
+#Reformats taxonomic information to provide genus-level taxa in the species column for duplicate reads
+cd $proj_dir/metagenome/sighits/sighits_genus
 for i in $(ls *_taxids_dup.txt);do
-	#((t=t%N)); ((t++==0)) && wait
-	awk -F '\t' 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' /home/brandon/Desktop/Qmatey/tools/rankedlineage_edited.dmp OFS='\t' $i> ${i%_taxids_dup*}_dup_inter.txt #&
+	awk -F '\t' 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' /home/brandon/Desktop/Qmatey/tools/rankedlineage_edited.dmp OFS='\t' $i> ${i%_taxids_dup*}_dup_inter.txt 
 done
 
-
 for i in $(ls *_dup_inter.txt);do
-	awk -F '\t'  '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' $i > ${i%_dup_inter*}_genus_taxid.txt
+	awk -F '\t'  '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' $i > ${i%_dup_inter*}_species_taxid.txt
 done
 
 rm *_taxids_dup.txt
 
-for i in $(ls *_genus_taxid.txt);do
-	awk -F '\t' '{print $1}' $i | awk -F ' ' '{print $1, $2}' > ${i%_genus_taxid*}_species_column.txt
+for i in $(ls *_species_taxid.txt);do
+	awk -F '\t' '{print $1}' $i | awk -F ' ' '{print $1, $2}' > ${i%_species_taxid*}_species_column.txt
 done
 
 for i in $(ls *_species_column.txt);do
-	paste <(awk '{print $0}' OFS='\t' $i) <(awk -F '\t' '{print $1, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' ${i%_species_column.txt}_genus_taxid.txt) | awk -F '\t' '{print $2, $1, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' > ${i%_species_column*}_genus_taxa.txt
+	paste <(awk '{print $0}' OFS='\t' $i) <(awk -F '\t' '{print $1, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' ${i%_species_column*}_species_taxid.txt) | awk -F '\t' '{print $2, $1, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' > ${i%_species_column*}_species_taxa.txt
 done
 
 for i in $(ls *_dup.txt);do
-	paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12}' OFS='\t' $i ) <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9}' OFS='\t' ${i%_dup.txt}_genus_taxa.txt) > ${i%_dup*}_genus_duplicates.txt
+	paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12}' OFS='\t' $i ) <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9}' OFS='\t' ${i%*_dup.txt}_species_taxa.txt) > ${i%_dup*}_genus_duplicates.txt
 done
 
-rm *_genus_taxid.txt && rm *_dup_inter.txt && rm *_dup.txt && rm *_species_column.txt && rm *_genus_taxa.txt 
+rm *_species_taxid.txt && rm *_dup_inter.txt && rm *_dup.txt && rm *_species_column.txt && rm *_species_taxa.txt
 ################################################################################################################
 #Genus-level clustering
-cd $proj_dir/metagenome/sighits/sighits_genus/
 for i in $(ls *_genus_duplicates.txt);do
-	#((t=t%N)); ((t++==0)) && wait
-	awk -F '\t' '{a[$2,$15]++;b[$2,$15]=$0}END{for(x in a)if(a[x]==1)print b[x]}' OFS='\t' $i > ${i%_genus_duplicates*}_genus_errors.txt
+	awk -F '\t' '{print $1, $2"~"$15, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $16, $17, $18, $19, $20, $21}' OFS='\t' $i > ${i%_genus_duplicates*}_genus_inter.txt
 done
 
-for i in $(ls *_genus_errors.txt);do
-	awk -F '\t' 'FNR==NR{a[$2]=1; next}  !a[$2]' OFS='\t' $i ${i%_genus_errors.txt}_genus_duplicates.txt > ${i%_genus_errors*}_filtered_genus_sequences.txt
+for i in $(ls *_genus_inter.txt);do
+	awk -F '\t' '{print $2, $1, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21}' OFS='\t' $i > ${i%_genus_inter*}_genus_inter2.txt
 done
 
-for i in $(ls *_filtered_genus_sequences.txt);do
-	awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12}' OFS='\t' $i > ${i%_filtered_genus_sequences*}_multi_genus_reads.txt
+for i in $(ls *_genus_inter2.txt);do
+	awk -F '\t' '{dups[$1]++} END {for (num in dups) {print num}}' $i | sort -k1,1  > ${i%_genus_inter2*}_duplicate_count.txt 
 done
 
-rm *_filtered_genus_sequences.txt
-
-for i in $(ls *_multi_genus_reads.txt);do
-	cat $i ${i%_multi_genus_reads.txt}_genus_unique_reads.txt > ${i%_multi_genus_reads*}_complete_genus_reads.txt
+for i in $(ls *_duplicate_count.txt);do
+	awk -F '~' '{a[$1]++;b[$1]=$0}END{for(x in a)if(a[x]==1)print b[x]}' $i | sort -k1,1 > ${i%_duplicate_count*}_multialign_genus_reads.txt
 done
-rm *_multi_genus_reads.txt && rm *_genus_duplicates.txt && rm *_genus_unique_reads.txt && rm *_genus_errors.txt
+
+for i in $(ls *_multialign_genus_reads.txt);do
+	awk -F '\t'  'FNR==NR {a[$1]; next}; $1 in a' $i ${i%_multialign_genus_reads*}_genus_inter2.txt | sort -u -k1,1 | awk 'gsub("~","\t",$0)'| awk -F '\t' '{print $3, $1, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13}' OFS='\t' > ${i%_multialign_genus_reads*}_genus_OTU.txt
+done
+
+rm *_genus_inter.txt && rm *_genus_inter2.txt && rm *_duplicate_count.txt && rm *_multialign_genus_reads.txt && rm *_genus_duplicates.txt
+
+for i in $(ls *_genus_OTU.txt);do
+	cat $i ${i%_genus_OTU*}_genus_unique_reads.txt > ${i%_genus_OTU*}_complete_genus_reads.txt
+done 
 
 for i in $(ls *_complete_genus_reads.txt);do
 	awk '{ for(i=1;i<=NF;i++){if(i==NF){printf("%s\n",$NF);}else {printf("%s\t",$i)}}}' $i > ${i%_complete_genus_reads*}_sighits_temp.txt
@@ -269,7 +270,7 @@ for i in $(ls *_complete_genus_reads.txt);do
 	cat - ${i%_complete_genus_reads*}_sighits_temp.txt > ${i%_complete_genus_reads*}_sighits.txt
 done
 
-rm *_complete_genus_reads.txt && rm *_sighits_temp.txt
+rm *_complete_genus_reads.txt && rm *_sighits_temp.txt && rm *_genus_OTU.txt && rm *_unique_reads.txt
 #################################################################################################################
 #Combine all taxids for all files/individuals and perform single search against new_taxdump.
 cd $proj_dir/metagenome/sighits/sighits_genus
