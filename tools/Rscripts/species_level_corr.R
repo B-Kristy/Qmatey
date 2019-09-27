@@ -10,13 +10,11 @@ library(stringr)
 
 args <- commandArgs(TRUE)
 
-species <- read.table(args[1], header = T, sep="\t", check.names=FALSE, fill=TRUE)
-agg = aggregate(. ~ species, data = species, mean)
+species <- read.table("proj_taxainfo_mean.txt", header = T, sep="\t", check.names=FALSE, fill=TRUE)
 
-for (i in c(args[2])) {
-  metag <- subset(agg, select=-c(tax_id,genus,family,order,class,phylum,kingdom,superkingdom))
+for (i in c(5,10)) {
+  metag <- subset(species, select=-c(tax_id,genus,family,order,class,phylum,kingdom,superkingdom,taxname))
   metag <- subset(metag, select=c(ncol(metag),1:(ncol(metag)-1)))
-  metag <- subset(metag, select=-c(taxname))
   metag$count <- rowSums(metag[,2:ncol(metag)] > "0")
   metag$percent <- ((metag$count)/(ncol(metag)-2))*100
   metag <- subset(metag, percent >= i )
@@ -35,10 +33,10 @@ for (i in c(args[2])) {
     geom_point(aes(size=-pvalue), shape=21) + scale_fill_gradient2(low="red", mid="white", high="cornflowerblue") +
     theme_bw() + coord_equal() + scale_size(guide = 'none') +
     labs(x="",y="",fill="Correlation\nCoeficient",size="p-value") +
-    theme(axis.text.x=element_text(size=10.5, angle=45, vjust=1, hjust=1, margin=margin(0,0,0,0)),
-          axis.text.y=element_text(size=10.5, margin=margin(0,0,0,0)), panel.grid.major=element_line(colour = "grey95"),
-          legend.title=element_text(size=8), legend.text=element_text(size=8),legend.key.size = unit(0.3, "in"),
-          plot.title = element_text(size=7.5)) +
+    theme(axis.text.x=element_text(size=axis_density, angle=45, vjust=1, hjust=1, margin=margin(0,0,0,0)),
+          axis.text.y=element_text(size=axis_density, margin=margin(0,0,0,0)), panel.grid.major=element_line(colour = "grey95"),
+          legend.title=element_text(size=15), legend.text=element_text(size=20),legend.key.size = unit(0.5, "in"),
+          plot.title = element_text(size=15)) +
     labs(title= "Species-Level Correlogram")
-  ggsave(filename=paste("Metagenome",i,"_species_corr_spearman.tiff",sep=""), plot=plot, width=6, height=6, dpi=600, compression = "lzw", limitsize = FALSE)
+  ggsave(filename=paste("Metagenome",i,"_species_corr_spearman.tiff",sep=""), plot=plot, width=35, height=35, dpi=600, compression = "lzw", limitsize = FALSE)
 }

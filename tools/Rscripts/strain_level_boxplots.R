@@ -3,9 +3,9 @@ library(dplyr)
 library(plotly)
 library(htmlwidgets)
 args <- commandArgs(TRUE)
-dfm <- read.table(args[1], header=T, sep="\t", check.names =FALSE, fill=TRUE)
-dfu <- read.table(args[2], header=T, sep="\t", check.names = FALSE, fill=TRUE)
-dfe <- read.table(args[3], header=T, sep="\t", check.names = FALSE, fill= TRUE)
+dfm <- read.table("proj_taxainfo_mean.txt", header=T, sep="\t", check.names =FALSE, fill=TRUE)
+dfu <- read.table("proj_taxainfo_uniq_reads.txt", header=T, sep="\t", check.names = FALSE, fill=TRUE)
+dfe <- read.table("proj_taxainfo_stderr.txt", header=T, sep="\t", check.names = FALSE, fill= TRUE)
 percent_thresh <- 5
 
 data.pipe<-function(dfm,dfu,dfe,cut){

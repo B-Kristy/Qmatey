@@ -11,8 +11,8 @@ library(stringr)
 
 args <- commandArgs(TRUE)
 
-for (i in c(args[2])) {
-  metag <- read.table(args[1], header=T, sep="\t", check.names=FALSE, fill=TRUE)
+for (i in c(5,10)) {
+  metag <- read.table("proj_taxainfo_mean.txt", header=T, sep="\t", check.names=FALSE, fill=TRUE)
   metag <- subset(metag, select=-c(tax_id,species,genus,family,order,class,phylum,kingdom,superkingdom))
   metag <- subset(metag, select=c(ncol(metag),1:(ncol(metag)-1)))
   metag$count <- rowSums(metag[,2:ncol(metag)] > "0")

@@ -13,8 +13,7 @@ args <- commandArgs(TRUE)
 genus <- read.table(args[1], header = T, sep="\t", check.names=FALSE, fill=TRUE)
 agg = aggregate(. ~ genus, data = genus, mean)
 
-#setwd ("D:/Vbox_Shared/DC_gbs/metagenomes")
-for (i in c(args[2])) {
+for (i in c(5,10)) {
   metag <- subset(agg, select=-c(tax_id,species,family,order,class,phylum,kingdom,superkingdom))
   metag <- subset(metag, select=c(ncol(metag),1:(ncol(metag)-1)))
   metag <- subset(metag, select=-c(taxname))
