@@ -78,7 +78,8 @@ Before running QMatey, make sure you have:
 * Created a project directory with all the required subdirectories
 * Have QC-filtered sequencing data in the appropriate input directory
 * Obtained a host-reference genome in .fastq format in the appropriate reference genome directory
-* Obtained an NCBI database directory and have the uncompressed files in one directory **for a local BLAST** OR identified an NCBI database directory online **for a remote BLAST**
+* **for a local BLAST**: Obtained an NCBI database directory and have the uncompressed files in one directory
+* **for a remote BLAST**: identified an NCBI database directory online 
 * Have a correctly edited configuration file within the project directory 
 
 From the command line, type: 
