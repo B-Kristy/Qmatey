@@ -66,7 +66,7 @@ species_level  | An option for species-level taxonomic analysis                 
 genus_level    | An option for genus-level taxonomic analysis                        | TRUE or FALSE
 family_level   | An option for family-level taxonomic analysis                       | TRUE or FALSE
 blast_location | An option to perform BLAST locally or remotely                      | LOCAL or REMOTE
-remote_db_dir  | the NCBI database for remotely BLAST performance                    | e.g. nt, 16s, nr, etc. 
+remote_db_dir  | the NCBI database for remote BLAST performance                    | e.g. nt, 16s, nr, etc. 
 
 ## Usage 
 Before running QMatey, make sure you have:
