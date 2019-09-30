@@ -4,8 +4,8 @@ A taxonomic profiler capable of microbiome analysis designed by biologists.
 * Automated pipeline starting with raw sequencing data and ending with interactive visualizations 
 * Supports all Next-Generation Sequencing platforms
 * Identifies strain-level microbial interactions 
-* Capable of both species-level and genus-level clustering 
-* QC-plots to directly interact with metagenomic data 
+* Capable of both species-level, genus-level, and family-level taxonomic analysis 
+* QC-plots to directly interact with quantified metagenomic data
 * Easy to learn
 ## Installation 
 Clone or download the git repository to a desired location 
