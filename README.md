@@ -1,12 +1,11 @@
 # Qmatey
 A taxonomic profiler capable of robust microbiome analysis 
 ## Features
-* Automated pipeline starting with raw sequencing data and ending with interactive visualizations 
+* Automated pipeline starting with QC-filtered sequencing data and ending with host-associated microbiome quantification
 * Supports all Next-Generation Sequencing platforms
 * Identifies strain-level microbial interactions 
-* Capable of both species-level, genus-level, and family-level taxonomic analysis 
+* Capable of species-level, genus-level, and family-level taxonomic analysis 
 * QC-plots to directly interact with quantified metagenomic data
-* Easy to learn
 ## Installation 
 Clone or download the git repository to a desired location 
 
