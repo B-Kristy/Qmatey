@@ -40,9 +40,9 @@ Create a database directory and select the sequencing database from the FTP site
 ```
 mkdir database_directory
 cd database_directory
-wget ftp ftp://ftp.ncbi.nlm.nih.gov/blast/db/nt*.tar.gz
+wget ftp ftp://ftp.ncbi.nlm.nih.gov/blast/db/nt.00.tar.gz
 ```
-In the above code, I am extracting all compressed files of the **nucleotide (nt) database** into my database directory. A complete sequencing database will require an extensive amount of space. 
+In the above code, I am extracting the nt.00.tar.gz nucleotide database file into my database directory. A complete sequencing database will require an extensive amount of space. 
 
 Next, uncompress the database files and remove them with the following commands:
 ```
