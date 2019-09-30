@@ -25,8 +25,8 @@ $ git clone https://github.com/B-Kristy/Qmatey.git
   * Try 'sudo apt install default-jre'
 * Datamash
   * Try 'sudo apt install datamash' 
-* Any NCBI sequence database 
- 
+* If you are performing a local BLAST, you will require an NCBI sequencing database compiled into one directory
+
 ## Setting Up a Project Directory 
 A project directory should contain the following sub-directories:
 * Input Sequences
