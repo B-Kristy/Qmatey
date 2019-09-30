@@ -32,7 +32,7 @@ A project directory should contain the following sub-directories:
 * Input Sequences
   * This is where your QC-filtered sequencing data will go.
 * Reference Genome
-  * This is where your reference genome(s) will go. Reference genomes must be in **FastQ format**.
+  * This is where your host associated reference genome(s) will go. Reference genomes must be in **FastQ format**.
 * Configuration file
   * The format of the configuration file can be taken from the tools directory of the QMatey Repository. 
 ## Preparing A Database Directory for a Local BLAST
