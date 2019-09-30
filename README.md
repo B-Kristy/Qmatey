@@ -15,7 +15,13 @@ $ git clone https://github.com/B-Kristy/Qmatey.git
 ```
 
 ## Dependencies
-* R version compatible with the following dependencies: ggplot2 plotly
+* R version compatible with the following dependencies: 
+   * ggplot2 
+   * plotly
+   * plyr
+   * dplyr
+   * htmlwidgets 
+   * car 
 * Java 
   * Try 'sudo apt install default-jre'
 * Datamash
