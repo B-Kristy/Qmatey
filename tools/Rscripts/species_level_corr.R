@@ -10,9 +10,9 @@ library(stringr)
 
 args <- commandArgs(TRUE)
 
-species <- read.table("proj_taxainfo_mean.txt", header = T, sep="\t", check.names=FALSE, fill=TRUE)
+species <- read.table(args[1], header = T, sep="\t", check.names=FALSE, fill=TRUE)
 
-for (i in c(5,10)) {
+for (i in c(args[2])) {
   metag <- subset(species, select=-c(tax_id,genus,family,order,class,phylum,kingdom,superkingdom,taxname))
   metag <- subset(metag, select=c(ncol(metag),1:(ncol(metag)-1)))
   metag$count <- rowSums(metag[,2:ncol(metag)] > "0")

@@ -143,13 +143,24 @@ done
 #updatde database ### email="my email address here" ncbi-blast-dbs 16SMicrobial nt taxdump
 #specify blast output format ### http://www.metagenomics.wiki/tools/blast/blastn-output-format-6
 #download new_taxdump.tar.gz https://ncbiinsights.ncbi.nlm.nih.gov/2018/02/22/new-taxonomy-files-available-with-lineage-type-and-host-information/
-echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n Qmatey is performing BLAST \n \n------------------------------------------------------------------------------"
+
 cd $proj_dir/metagenome/haplotig
-for i in $(ls *_haplotig.fasta);do
-	$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $db_dir -num_threads $threads -evalue 1e-10 -max_target_seqs 5 -outfmt \
-	"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" \
-	-out ../alignment/${i%_haplotig*}_haplotig.megablast
-done
+if [ "$blast_location" == "LOCAL" ]; then
+echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n Qmatey is performing a local BLAST \n \n------------------------------------------------------------------------------"
+	for i in $(ls *_haplotig.fasta);do
+		$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $db_dir -num_threads $threads -evalue 1e-10 -max_target_seqs 5 -outfmt \
+		"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" \
+		-out ../alignment/${i%_haplotig*}_haplotig.megablast
+	done
+fi
+if [ "$blast_location" == "REMOTE" ]; then 
+echo -e "${YELLOW}------------------------------------------------------------------------------ \n \n Qmatey is performing a remote BLAST \n \n------------------------------------------------------------------------------"
+	for i in $(ls *_haplotig.fasta);do
+		$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $remote_db_dir -evalue 1e-10 -max_target_seqs 5 -outfmt \
+		"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" \
+		-out ../alignment/${i%_haplotig*}_haplotig.megablast -remote
+	done
+fi	
 ##################################################################################################################
 #Removes duplicate rows and vector contamination from *_haplotig.megablast
 cd $proj_dir/metagenome/alignment
