@@ -1,5 +1,5 @@
 # Qmatey
-A taxonomic profiler capable of microbiome analysis designed by biologists.
+A taxonomic profiler capable of robust microbiome analysis 
 ## Features
 * Automated pipeline starting with raw sequencing data and ending with interactive visualizations 
 * Supports all Next-Generation Sequencing platforms
