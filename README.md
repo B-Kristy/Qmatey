@@ -34,7 +34,7 @@ A project directory should contain the following sub-directories:
 * Reference Genome
   * This is where your host associated reference genome(s) will go. Reference genomes must be in **FastQ format**.
 * Configuration file
-  * The format of the configuration file can be taken from the tools directory of the QMatey Repository. 
+  * The format of the configuration file can be taken from the tools directory of the Qmatey Repository. 
 ## Preparing A Database Directory for a Local BLAST
 If necessary, install the lftp tool to navigate NCBI's FTP site:
 ```
@@ -63,7 +63,7 @@ Variable | Usage | Input
 -------------- | ------------------------------------------------------------------- | -----
 input_dir      | the path to QC-filtered sequencing data                             | e.g. /path/to/dir/
 ref_dir        | the path to the host reference genomes                              | e.g. /path/to/dir
-db_dir         | the path to a local NCBI sequencing database                            | e.g. /path/to/dir/nt
+db_dir         | the path to a local NCBI sequencing database                            | e.g. /path/to/dir/nt or NA
 threads        | the maximum number of subprocesses that can run simultaneously      | integer 
 tool_dir       | the path to QMatey's tools                                          | e.g. /path_to_github_repository/tools
 strain_level   | An option for strain-level taxonomic analysis                       | TRUE or FALSE
@@ -71,7 +71,7 @@ species_level  | An option for species-level taxonomic analysis                 
 genus_level    | An option for genus-level taxonomic analysis                        | TRUE or FALSE
 family_level   | An option for family-level taxonomic analysis                       | TRUE or FALSE
 blast_location | An option to perform BLAST locally or remotely                      | LOCAL or REMOTE
-remote_db_dir  | the NCBI database for remote BLAST performance                    | e.g. nt, 16s, nr, etc. 
+remote_db_dir  | the NCBI database for remote BLAST performance                    | e.g. nt, 16s, nr, etc. or NA
 
 ## Usage 
 Before running QMatey, make sure you have:
