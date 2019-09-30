@@ -83,7 +83,7 @@ Before running QMatey, make sure you have:
 
 From the command line, type: 
 ```
-$ bash <path to github repository>/Qmatey_v0.1.sh <path to project directory>/metagenome.config
+$ bash <path to github repository>/Qmatey_v0.1.sh <path to project directory>/Qmatey.config
 ```
 # License 
 <a href="https://github.com/tararickman/metagenome/blob/add-license-1/LICENSE"> GNU General Public License v3.0
