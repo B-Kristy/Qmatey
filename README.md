@@ -46,8 +46,8 @@ In the above code, I am extracting the nt.00.tar.gz nucleotide database file int
 
 Next, uncompress the database files and remove them with the following commands:
 ```
-tar -xzvf nt*.tar.gz
-rm *nt.tar.gz
+tar -xzvf nt00.tar.gz
+rm nt00.tar.gz
 ```
 
 Your database directory should now have the desired, uncompressed database files.
