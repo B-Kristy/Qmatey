@@ -1,4 +1,4 @@
-# QMatey
+# Qmatey
 A taxonomic profiler capable of microbiome analysis designed by biologists.
 ## Features
 * Automated pipeline starting with raw sequencing data and ending with interactive visualizations 
@@ -58,9 +58,15 @@ Variable | Usage | Input
 -------------- | ------------------------------------------------------------------- | -----
 input_dir      | the path to QC-filtered sequencing data                             | e.g. /path/to/dir/
 ref_dir        | the path to the host reference genomes                              | e.g. /path/to/dir
-db_dir         | the path to the NCBI sequencing database                            | e.g. /path/to/dir/nt
+db_dir         | the path to a local NCBI sequencing database                            | e.g. /path/to/dir/nt
 threads        | the maximum number of subprocesses that can run simultaneously      | integer 
 tool_dir       | the path to QMatey's tools                                          | e.g. /path_to_github_repository/tools
+strain_level   | An option for strain-level taxonomic analysis                       | TRUE or FALSE
+species_level  | An option for species-level taxonomic analysis                      | TRUE or FALSE
+genus_level    | An option for genus-level taxonomic analysis                        | TRUE or FALSE
+family_level   | An option for family-level taxonomic analysis                       | TRUE or FALSE
+blast_location | An option to perform BLAST locally or remotely                      | LOCAL or REMOTE
+remote_db_dir  | the NCBI database for remotely BLAST performance                    | e.g. nt, 16s, nr, etc. 
 
 ## Usage 
 Before running QMatey, make sure you have:
@@ -72,7 +78,7 @@ Before running QMatey, make sure you have:
 
 From the command line, type: 
 ```
-$ bash <path to github repository>/QMatey.sh <path to project directory>/QMatey.config
+$ bash <path to github repository>/Qmatey_v0.1.sh <path to project directory>/metagenome.config
 ```
 # License 
 <a href="https://github.com/tararickman/metagenome/blob/add-license-1/LICENSE"> GNU General Public License v3.0
