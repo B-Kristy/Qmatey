@@ -3,10 +3,10 @@ library(dplyr)
 library(plotly)
 library(htmlwidgets)
 args <- commandArgs(TRUE)
-dfm <- read.table(args[1], header=T, sep="\t", check.names =FALSE, fill=TRUE)
-dfu <- read.table(args[2], header=T, sep="\t", check.names = FALSE, fill=TRUE)
-dfe <- read.table(args[3], header=T, sep="\t", check.names = FALSE, fill= TRUE)
-percent_thresh <- args[4]
+dfm <- read.table("strain_taxainfo_mean.txt", header=T, sep="\t", check.names =FALSE, fill=TRUE)
+dfu <- read.table("strain_taxainfo_unique_sequences.txt", header=T, sep="\t", check.names = FALSE, fill=TRUE)
+dfe <- read.table("strain_taxainfo_quantification_accuracy.txt", header=T, sep="\t", check.names = FALSE, fill= TRUE)
+percent_thresh <- 5
 
 data.pipe<-function(dfm,dfu,dfe,cut){
   '%!in%' <- function(x,y)!('%in%'(x,y))
@@ -80,7 +80,7 @@ uniq_box<-function(df, dfu){
   library(dplyr)
   #chop off taxa names
   uniq <- subset(dfu, select=-c(tax_id,species,genus,family,order,class,phylum,kingdom,superkingdom))
-  fence<-data.frame(matrix(nrow=2079, ncol = 2))
+  fence<-data.frame(matrix(nrow=nrow(uniq), ncol = 2))
   taxa<-c()
   up<-c()
   for (pl in 1:nrow(uniq)) {
@@ -112,7 +112,7 @@ mean_box<-function(df, dfm){
   library(dplyr)
   #chop off taxa names
   mean <- subset(dfm, select=-c(tax_id,species,genus,family,order,class,phylum,kingdom,superkingdom))
-  fence<-data.frame(matrix(nrow=2079, ncol = 2))
+  fence<-data.frame(matrix(nrow=nrow(mean), ncol = 2))
   taxa<-c()
   up<-c()
   for (pl in 1:nrow(mean)) {
@@ -144,7 +144,7 @@ error_box<-function(df, dfe){
   library(dplyr)
   #chop off taxa names
   error <- subset(dfe, select=-c(tax_id,species,genus,family,order,class,phylum,kingdom,superkingdom))
-  fence<-data.frame(matrix(nrow=2079, ncol = 2))
+  fence<-data.frame(matrix(nrow=nrow(error), ncol = 2))
   taxa<-c()
   up<-c()
   for (pl in 1:nrow(error)) {
@@ -170,4 +170,4 @@ error_box<-function(df, dfe){
   htmlwidgets::saveWidget(as_widget(u), "strain_level_outliers_errors.html")
 }
 error_box(df, dfe)
-
+  

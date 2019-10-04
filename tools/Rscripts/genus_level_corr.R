@@ -10,17 +10,19 @@ library(stringr)
 
 args <- commandArgs(TRUE)
 
+percent <- args[2]
+percent <- as.numeric(percent)
 genus <- read.table(args[1], header = T, sep="\t", check.names=FALSE, fill=TRUE)
 
-for (i in c(args[2])) {
-  metag <- subset(genus, select=-c(tax_id,species,family,order,class,phylum,kingdom,superkingdom,taxname))
-  metag <- subset(metag, select=c(ncol(metag),1:(ncol(metag)-1)))
+
+for (i in c(percent)) {
+  metag <- genus
   metag$count <- rowSums(metag[,2:ncol(metag)] > "0")
   metag$percent <- ((metag$count)/(ncol(metag)-2))*100
   metag <- subset(metag, percent >= i )
   metag <- subset(metag, select=-c(count,percent))
   metag <- setNames(data.frame(t(metag[,-1])), metag[,1])
-  metag_corr <- cor(metag, method = c("spearman")); axis_density <- 2000/nrow(metag_corr)
+  metag_corr <- cor(metag, method = c("spearman")); axis_density <- (10*nrow(genus)/nrow(metag_corr))
   metag_corr <- melt(metag_corr)
   metag_pmat <- cor_pmat(metag, method = c("spearman"), exact=FALSE)
   metag_pmat <- melt(metag_pmat)
@@ -39,4 +41,5 @@ for (i in c(args[2])) {
           plot.title = element_text(size=15)) +
     labs(title= "Genus-Level Correlogram")
   ggsave(filename=paste("Metagenome",i,"_genus_corr_spearman.tiff",sep=""), plot=plot, width=35, height=35, dpi=600, compression = "lzw", limitsize = FALSE)
-}
+  }
+  

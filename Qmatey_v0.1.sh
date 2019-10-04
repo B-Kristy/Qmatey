@@ -428,14 +428,16 @@ cp seqcov.txt ./species_level
 	awk -F '\t' -v var="$species" ' FNR==NR {a[NR]=$1;next}{$var=a[FNR]}1' OFS='\t' species_column.txt species_inter_unique_sequences.txt > species_taxainfo_unique_sequences.txt
 	awk -F '\t' -v var="$species" ' FNR==NR {a[NR]=$1;next}{$var=a[FNR]}1' OFS='\t' species_column.txt species_inter_quantification_accuracy.txt > species_taxainfo_quantification_accuracy.txt
 
-	rm species_inter_mean.txt && rm species_inter_unique_sequences.txt && rm species_inter_quantification_accuracy.txt
+	rm species_inter_mean.txt && rm species_inter_unique_sequences.txt && rm species_inter_quantification_accuracy.txt && rm species_column.txt
 
+	species_level_mean=species_taxainfo_mean.txt
+	species_level_uniq=species_taxainfo_unique_sequences.txt
+	species_level_quant=species_taxainfo_quantification_accuracy.txt
+	Rscript $tool_dir/Rscripts/species_level_agg.R $species_level_mean $species_level_uniq $species_level_quant
 ################################################################################################################
 #Species-level visualizations
-	cd $proj_dir/metagenome/results/species_level
-	species_level_input=species_taxainfo_mean.txt
 	percent_thresh=5
-	Rscript $tool_dir/Rscripts/species_level_corr.R $species_level_input $percent_thresh &>/dev/null
+	Rscript $tool_dir/Rscripts/species_level_corr.R $species_level_mean $percent_thresh &>/dev/null
 fi
 ################################################################################################################
 #Genus-level sighit identification
@@ -590,11 +592,16 @@ cp seqcov.txt ./genus_level
 		awk 'NR==1{for(i=1;i<=NF;i++)b[$i]++&&a[i]}{for(i in a)$i="";gsub(" +"," ")}1' | awk '{gsub(/ /,"\t"); print }' > genus_taxainfo_${i}.txt
 	done
 	rm *_taxa_*
+	
+	genus_level_mean=genus_taxainfo_mean.txt
+	genus_level_uniq=genus_taxainfo_unique_sequences.txt
+	genus_level_quant=genus_taxainfo_quantification_accuracy.txt
+	Rscript $tool_dir/Rscripts/genus_level_agg.R $genus_level_mean $genus_level_uniq $genus_level_quant
+
 ################################################################################################################
 #Genus-level visualizations
-	genus_level_input=genus_taxainfo_mean.txt
 	percent_thresh=5
-	Rscript $tool_dir/Rscripts/genus_level_corr.R $genus_level_input $percent_thresh &>/dev/null
+	Rscript $tool_dir/Rscripts/genus_level_corr.R $genus_level_mean $percent_thresh &>/dev/null
 fi
 ################################################################################################################
 #Family-Level sighit identification
@@ -748,11 +755,16 @@ cp seqcov.txt ./family_level
 		awk 'NR==1{for(i=1;i<=NF;i++)b[$i]++&&a[i]}{for(i in a)$i="";gsub(" +"," ")}1' | awk '{gsub(/ /,"\t"); print }' > family_taxainfo_${i}.txt
 	done
 	rm *_taxa_*
+	
+	family_level_mean=family_taxainfo_mean.txt
+	family_level_uniq=family_taxainfo_unique_sequences.txt
+	family_level_quant=family_taxainfo_quantification_accuracy.txt
+	Rscript $tool_dir/Rscripts/family_level_agg.R $family_level_mean $family_level_uniq $family_level_quant &>/dev/null
+
 ################################################################################################################
 #Family-level visualizations
-	family_level_input=family_taxainfo_mean.txt
 	percent_thresh=5
-	Rscript $tool_dir/Rscripts/family_level_corr.R $family_level_input $percent_thresh &>/dev/null
+	Rscript $tool_dir/Rscripts/family_level_corr.R $family_level_mean $percent_thresh &>/dev/null
 fi
 
 
