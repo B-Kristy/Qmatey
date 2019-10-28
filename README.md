@@ -1,3 +1,5 @@
+[logo]:https://imgur.com/a/Wl8eyDz
+
 # Qmatey
 A taxonomic profiler capable of robust microbiome analysis 
 ## Features
