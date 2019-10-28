@@ -66,16 +66,16 @@ Your database directory should now have the desired, uncompressed database files
 
 Variable | Usage | Input
 -------------- | ------------------------------------------------------------------- | -----
-input_dir      | the path to QC-filtered sequencing data                             | e.g. /path/to/dir/
-ref_dir        | the path to the host reference genomes                              | e.g. /path/to/dir
-db_dir         | the path to a local NCBI sequencing database                            | e.g. /path/to/dir/nt or NA
+input_dir      | the path to QC-filtered sequencing data                             | e.g. <path to directory>/
+ref_dir        | the path to the host reference genomes                              | e.g. <path to directory>/
 threads        | the maximum number of subprocesses that can run simultaneously      | integer 
-tool_dir       | the path to QMatey's tools                                          | e.g. /path_to_github_repository/tools
+tool_dir       | the path to QMatey's tools                                          | e.g. <path to github repository>/tools
 strain_level   | An option for strain-level taxonomic analysis                       | TRUE or FALSE
 species_level  | An option for species-level taxonomic analysis                      | TRUE or FALSE
 genus_level    | An option for genus-level taxonomic analysis                        | TRUE or FALSE
 family_level   | An option for family-level taxonomic analysis                       | TRUE or FALSE
 blast_location | An option to perform BLAST locally or remotely                      | LOCAL or REMOTE
+local_db_dir   | the path to a local NCBI sequencing database on your desktop        | e.g. <path to directory>/database name or NA
 remote_db_dir  | the NCBI database for remote BLAST performance                    | e.g. nt, 16s, nr, etc. or NA
 
 ## Usage 
