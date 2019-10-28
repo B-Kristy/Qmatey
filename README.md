@@ -1,4 +1,4 @@
-![alt text](https://imgur.com/a/Wl8eyDz "Logo Title Text 1")
+
 
 # Qmatey
 A taxonomic profiler capable of robust microbiome analysis 
