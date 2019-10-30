@@ -69,7 +69,7 @@ Variable | Usage | Input
 input_dir      | the path to QC-filtered sequencing data                             | /path to directory/
 ref_dir        | the path to the host reference genomes                              | /path to directory/
 threads        | the maximum number of subprocesses that can run simultaneously      | integer 
-tool_dir       | the path to QMatey's tools                                          | /path to downloaded Qmatey repository/tools
+tool_dir       | the path to Qmatey's tools                                          | /path to downloaded Qmatey repository/tools
 strain_level   | An option for strain-level taxonomic analysis                       | TRUE or FALSE
 species_level  | An option for species-level taxonomic analysis                      | TRUE or FALSE
 genus_level    | An option for genus-level taxonomic analysis                        | TRUE or FALSE
@@ -79,7 +79,7 @@ local_db_dir   | the path to a local NCBI sequencing database on your desktop   
 remote_db_dir  | the NCBI database for remote BLAST performance                    | e.g. nt, 16s, nr, etc. or NA
 
 ## Usage 
-Before running QMatey, make sure you have:
+Before running Qmatey, make sure you have:
 * Created a project directory with all the required subdirectories
 * Have QC-filtered sequencing data in the appropriate input directory
 * Obtained a host-reference genome in .fastq format in the appropriate reference genome directory
