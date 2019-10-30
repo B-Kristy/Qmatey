@@ -7,7 +7,7 @@ Qmatey is undergoing testing and will be available for public use. If you have a
 A taxonomic profiler capable of robust microbiome analysis 
 ## Features
 * Automated pipeline starting with QC-filtered sequencing data and ending with microbiome quantification and visualization
-* Supports all Next-Generation Sequencing platforms, including 16S/ITS, WGS, and RRS.
+* Supports all Next-Generation Sequencing platforms, including 16S/ITS amplicon sequencing, Whole-Genome shotgun sequencing, and reduced representation sequencing.
 * User-defined parameters for strain-level, species-level, genus-level, and family-level taxonomic analysis 
 * QC-plots to evaluate the predictive accuracy of quantified metagenomic data
 
@@ -30,14 +30,14 @@ $ git clone https://github.com/B-Kristy/Qmatey.git
   * Try 'sudo apt install default-jre'
 * Datamash
   * Try 'sudo apt install datamash' 
-* If you are performing a local BLAST, you will require an NCBI sequencing database compiled into one directory
+* If you are performing a **local BLAST**, you will require an NCBI sequencing database compiled into one directory
 
 ## Setting Up a Project Directory 
 A project directory should contain the following sub-directories:
 * Input Sequences
   * This is where your QC-filtered sequencing data will go.
 * Reference Genome
-  * This is where your host associated reference genome(s) will go. Reference genomes must be in **FastQ format**.
+  * This is where your host associated reference genome(s) will go. Reference genomes must be in **Fasta format**.
 * Configuration file
   * The format of the configuration file can be taken from the tools directory of the Qmatey Repository. 
 ## Preparing A Database Directory for a Local BLAST
