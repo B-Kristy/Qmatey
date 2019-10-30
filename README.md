@@ -6,11 +6,11 @@ Qmatey is undergoing testing and will be available for public use. If you have a
 # Qmatey
 A taxonomic profiler capable of robust microbiome analysis 
 ## Features
-* Automated pipeline starting with QC-filtered sequencing data and ending with host-associated microbiome quantification
-* Supports all Next-Generation Sequencing platforms
-* Identifies strain-level microbial interactions 
-* Capable of species-level, genus-level, and family-level taxonomic analysis 
-* QC-plots to directly interact with quantified metagenomic data
+* Automated pipeline starting with QC-filtered sequencing data and ending with microbiome quantification and visualization
+* Supports all Next-Generation Sequencing platforms, including 16S/ITS, WGS, and RRS.
+* User-defined parameters for strain-level, species-level, genus-level, and family-level taxonomic analysis 
+* QC-plots to evaluate the predictive accuracy of quantified metagenomic data
+
 ## Installation 
 Clone or download the git repository to a desired location 
 
@@ -66,16 +66,16 @@ Your database directory should now have the desired, uncompressed database files
 
 Variable | Usage | Input
 -------------- | ------------------------------------------------------------------- | -----
-input_dir      | the path to QC-filtered sequencing data                             | e.g. /path to directory/
-ref_dir        | the path to the host reference genomes                              | e.g. /path to directory/
+input_dir      | the path to QC-filtered sequencing data                             | /path to directory/
+ref_dir        | the path to the host reference genomes                              | /path to directory/
 threads        | the maximum number of subprocesses that can run simultaneously      | integer 
-tool_dir       | the path to QMatey's tools                                          | e.g. /path to github repository/tools
+tool_dir       | the path to QMatey's tools                                          | /path to downloaded Qmatey repository/tools
 strain_level   | An option for strain-level taxonomic analysis                       | TRUE or FALSE
 species_level  | An option for species-level taxonomic analysis                      | TRUE or FALSE
 genus_level    | An option for genus-level taxonomic analysis                        | TRUE or FALSE
 family_level   | An option for family-level taxonomic analysis                       | TRUE or FALSE
 blast_location | An option to perform BLAST locally or remotely                      | LOCAL or REMOTE
-local_db_dir   | the path to a local NCBI sequencing database on your desktop        | e.g. /path to directory/database name or NA
+local_db_dir   | the path to a local NCBI sequencing database on your desktop        | /path to directory/database name or NA
 remote_db_dir  | the NCBI database for remote BLAST performance                    | e.g. nt, 16s, nr, etc. or NA
 
 ## Usage 
