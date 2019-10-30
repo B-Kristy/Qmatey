@@ -36,7 +36,7 @@ $ git clone https://github.com/B-Kristy/Qmatey.git
 A project directory should contain the following sub-directories:
 * Input Sequences
   * This is where your QC-filtered sequencing data will go.
-* Reference Genome
+* Host Genome
   * This is where your host associated reference genome(s) will go. Reference genomes must be in **Fasta format**.
 * Configuration file
   * The format of the configuration file can be taken from the tools directory of the Qmatey Repository. 
@@ -67,7 +67,7 @@ Your database directory should now have the desired, uncompressed database files
 Variable | Usage | Input
 -------------- | ------------------------------------------------------------------- | -----
 input_dir      | the path to QC-filtered sequencing data                             | /path to directory/
-ref_dir        | the path to the host reference genomes                              | /path to directory/
+host_dir        | the path to the host reference genomes                              | /path to directory/
 threads        | the maximum number of subprocesses that can run simultaneously      | integer 
 tool_dir       | the path to Qmatey's tools                                          | /path to downloaded Qmatey repository/tools
 strain_level   | An option for strain-level taxonomic analysis                       | TRUE or FALSE
