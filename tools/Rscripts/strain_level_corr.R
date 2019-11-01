@@ -14,7 +14,7 @@ percent <- args[2]
 percent <- as.numeric(percent)
 
 for (i in c(percent)) {
-  metag <- read.table("strain_taxainfo_mean.txt", header=T, sep="\t", check.names=FALSE, fill=TRUE)
+  metag <- read.table(args[1], header=T, sep="\t", check.names=FALSE, fill=TRUE)
   metag <- subset(metag, select=-c(tax_id,species,genus,family,order,class,phylum,kingdom,superkingdom))
   metag <- subset(metag, select=c(ncol(metag),1:(ncol(metag)-1)))
   metag$count <- rowSums(metag[,2:ncol(metag)] > "0")
@@ -37,9 +37,10 @@ for (i in c(percent)) {
     labs(x="",y="",fill="Correlation\nCoeficient",size="p-value") +
     theme(axis.text.x=element_text(size=axis_density, angle=45, vjust=1, hjust=1, margin=margin(0,0,0,0)),
           axis.text.y=element_text(size=axis_density, margin=margin(0,0,0,0)), panel.grid.major=element_line(colour = "grey95"),
-          legend.title=element_text(0.5*axis_density), legend.text=element_text(size=20),legend.key.size = unit(0.5, "in"),
-          plot.title = element_text(size=axis_density) +
+          legend.title=element_text(size=0.5*axis_density), legend.text=element_text(size=20),legend.key.size = unit(0.5, "in"),
+          plot.title = element_text(size=axis_density)) +
     labs(title= "Strain-Level Correlogram")
-  ggsave(filename=paste("Metagenome",i,"_strain_corr_spearman.tiff",sep=""), plot=plot, width = 35, height = 35, units = c("in"), compression = "lzw", dpi = 600 )
+  ggsave(filename=paste("Metagenome",i,"_Strain_corr_spearman.tiff",sep=""), plot=plot, width=35, height=35, dpi=600, compression = "lzw", limitsize = FALSE)
 }
+
 
