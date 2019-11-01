@@ -38,7 +38,6 @@ fi
 [ -d "$tool_dir" ] || { echo -e "$tool_dir \e[31mnot found, exiting"; exit 1; }
 [ -d "$input_dir" ] || { echo -e "$input_dir \e[31mnot found, exiting"; exit 1; }
 [ -d "$proj_dir" ] || { echo -e "$proj_dir \e[31mnot found, exiting"; exit 1; }
-[ -d "$norm_ref_dir" ] || { echo -e "$norm_ref_dir \e[31mnot found, exiting"; exit 1; }
 ##################################################################################################################
 #Create all necessary subdirectories for downstream processing
 cd $proj_dir
@@ -51,6 +50,7 @@ mkdir results
 
 #################################################################################################################
 host_norm () {
+	[ -d "$norm_ref_dir" ] || { echo -e "$norm_ref_dir \e[31mnot found, exiting"; exit 1; }
 	echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Perfroming Host Coverage Normalization \n\e[97m########################################################\n"
 	cd $norm_ref_dir
 	echo -e "${YELLOW}- indexing host reference genome${WHITE}"
@@ -179,9 +179,11 @@ bypass_host_norm () {
 			cat $i >> tempcov.txt | awk '{sum+=$1}END{print sum}' tempcov.txt > seqcov.txt
 		done
 		rm *_seq.txt & rm *tempcov.txt
+		cd $input_dir
 		for i in $(ls *.f*);do
- 			awk < $i '/^>/ { print $0 }' > ../metagenome/haplotig/${i%.*}_haplocov.txt
+			awk < $i '/^>/ { print $0, 1}' > ../metagenome/haplotig/${i%.*}_haplocov.txt
 		done
+		cd $proj_dir/metagenome/haplotig
 		for i in $(ls *_haplocov.txt);do
 			id=${i%_haplocov*}
 			normfactor=1
@@ -192,47 +194,51 @@ bypass_host_norm () {
 		cd $input_dir
 		if [ "$blast_location" == "LOCAL" ]; then
 			echo -e "${YELLOW}- performing a local BLAST"
-				for i in $(ls *.fasta);do
+				for i in $(ls *.fa*);do
 					$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $local_db_dir -num_threads $threads -evalue 1e-10 -max_target_seqs 5 -outfmt \
 					"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" \
-					-out ../metagenome/alignment/${i%.*}_haplotig.megablast
+					-out ../metagenome/alignment/${i%.fa*}_haplotig.megablast
 				done
 		fi
 		if [ "$blast_location" == "REMOTE" ]; then 
 		echo -e "${YELLOW}- performing a remote BLAST"
-				for i in $(ls *.fasta);do
+				for i in $(ls *.fa*);do
 					$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $remote_db_dir -evalue 1e-10 -max_target_seqs 5 -outfmt \
 					"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" \
-					-out ../metagenome/alignment/${i%.*}_haplotig.megablast -remote
+					-out ../metagenome/alignment/${i%.fa*}_haplotig.megablast -remote
 				done
 		fi
 
 	else
 
 		echo -e "${YELLOW}- calculatng metagenomic coverage"
-		for i in $(ls *.f*);do
-			if [[ $i == *.gz ]]; then
-				gunzip $i
-			fi
+		for i in $(ls *.gz);do
+			gunzip $i
+
 		done
 		for i in $(ls *.f*);do 
-			awk '{if(NR%4==2) print $0}' $i > ../metagenome/results/${i%.*}_seq.txt | gzip $i
+			awk '{if(NR%4==2) print $0}' $i > ../metagenome/results/${i%.*}_seq.txt
 		done
 		cd $proj_dir/metagenome/results
 		for i in $(ls *_seq.txt);do
-			wc -l $i > ${i%meta*}seqcov.txt
+			wc -l $i > ${i%meta*}_seqcov.txt
 			find . -type f -name '*_seqcov.txt' -exec cat {} + > tempcov.txt
 			awk '{sum+=$1}END{print sum}' tempcov.txt > seqcov.txt
 		done
 		rm *_seq.txt && rm *tempcov.txt && rm *_seqcov.txt
 		cd $input_dir
 		echo -e "${YELLOW}- converting files into .fasta format"
-		for i in $(ls *.f*);do
-			awk 'NR%2==0' $i | awk 'NR%2==1' | sort | uniq -c | tr -s ' ' '\t' | awk '$0=">hseqid_"NR$0' | awk '$2>"0"' > ../metagenome/haplotig${i%_meta*}_cov_haplotig.txt
-			awk '{print $1"\t"$2}' ../metagenome/haplotig/${i%_meta*}_cov_haplotig.txt | awk  'gsub(">", "", $0)' > ../metagenomic/haplotig/${i%_meta*}_haplocov.txt
-			awk '{print $1"\n"$3}' ../metagenome/haplotig/${i%_meta*}_cov_haplotig.txt > ../metagenome/haplotig/${i%_meta*}_haplotig.fasta 
-		rm ${i%_meta*}_metagenome.fastq && rm ${i%_meta*}_cov_haplotig.txt && cd $proj_dir/metagenome
+		for i in $(ls *.fastq);do
+			awk 'NR%2==0' $i | awk 'NR%2==1' | sort | uniq -c | tr -s ' ' '\t' | awk '$0=">hseqid_"NR$0' | awk '$2>"0"' > ../metagenome/haplotig/${i%.fastq*}_cov_haplotig.txt
 		done
+		cd $proj_dir/metagenome/haplotig
+		for i in $(ls *_cov_haplotig.txt);do
+			awk '{print $1"\t"$2}' $i | awk  'gsub(">", "", $0)' > ${i%_cov_haplotig*}_haplocov.txt
+		done
+		for i in $(ls *_cov_haplotig.txt);do
+			awk '{print $1"\n"$3}' $i > ${i%_cov_haplotig*}_haplotig.fasta
+		done
+		rm *_cov_haplotig.txt
 		cd $proj_dir/metagenome/haplotig
 		for i in $(ls *_haplocov.txt);do
 			id=${i%_haplocov*}
@@ -275,6 +281,11 @@ for i in $(ls *_haplotig.megablast);do
 done
 rm *_haplotig.megablast
 
+awk '{gsub(/\t\t/,"\tNA\t"); print}' $tool_dir/rankedlineage.dmp | awk '{gsub(/[|]/,""); print}' | awk '{gsub(/\t\t/,"\t"); print}' > $tool_dir/rankedlineage_tabdelimited.dmp
+echo $'tax_id\ttaxname\tspecies\tgenus\tfamily\torder\tclass\tphylum\tkingdom\tsuperkingdom\t' | \
+cat - $tool_dir/rankedlineage_tabdelimited.dmp > $tool_dir/rankedlineage_edited.dmp
+rm $tool_dir/rankedlineage_tabdelimited.dmp
+
 ##################################################################################################################
 main() {
 cd $proj_dir/metagenome/sighits
@@ -299,10 +310,6 @@ for i in $(ls *_sighits.txt);do
 done
 rm *_sighits.txt *_nr_temp.txt
 echo -e "${YELLOW}- compiling taxonomic information"
-awk '{gsub(/\t\t/,"\tNA\t"); print}' $tool_dir/rankedlineage.dmp | awk '{gsub(/[|]/,""); print}' | awk '{gsub(/\t\t/,"\t"); print}' > $tool_dir/rankedlineage_tabdelimited.dmp
-echo $'tax_id\ttaxname\tspecies\tgenus\tfamily\torder\tclass\tphylum\tkingdom\tsuperkingdom\t' | \
-cat - $tool_dir/rankedlineage_tabdelimited.dmp > $tool_dir/rankedlineage_edited.dmp
-rm $tool_dir/rankedlineage_tabdelimited.dmp
 cd $proj_dir/metagenome/sighits/sighits_strain
 find . -type f -name '*_sighits_nr.txt' -exec cat {} + > sighits.txt
 awk '{print $11}' sighits.txt | awk '{gsub(";","\n"); print}' | sort -u -n | sed -e '1s/staxids/tax_id/' > taxids_sighits.txt && rm sighits.txt
@@ -368,7 +375,7 @@ echo -e "\e[97m########################################################\n \e[38;
 cd $proj_dir/metagenome/alignment
 echo -e "${YELLOW}- performing exact-matching algorithm"
 for i in $(ls *_haplotig_nd.megablast);do
-	awk '$6>=95' $i | awk '$7>=95' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_species/${i%_haplotig*}_filter.txt
+	awk '$6>=97' $i | awk '$7>=97' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_species/${i%_haplotig*}_filter.txt
 	awk 'NR==FNR {h[$1] = $2; next} {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,h[$1]}' ../haplotig/${i%_haplotig*}_normalized.txt ../sighits/sighits_species/${i%_haplotig*}_filter.txt | 
 	awk '{print $12,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11}' | awk 'gsub(" ","\t",$0)' > ../sighits/sighits_species/${i%_haplotig*}_sighits.txt
 done
@@ -551,7 +558,7 @@ echo -e "\e[97m########################################################\n \e[38;
 cd $proj_dir/metagenome/alignment
 echo -e "${YELLOW}- performing exact-matching algorithm"
 for i in $(ls *_haplotig_nd.megablast);do
-	awk '$6>=90' $i | awk '$7>=90' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_genus/${i%_haplotig*}_filter.txt
+	awk '$6>=97' $i | awk '$7>=97' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_genus/${i%_haplotig*}_filter.txt
 	awk 'NR==FNR {h[$1] = $2; next} {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,h[$1]}' ../haplotig/${i%_haplotig*}_normalized.txt ../sighits/sighits_genus/${i%_haplotig*}_filter.txt | 
 	awk '{print $12,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11}' | awk 'gsub(" ","\t",$0)' > ../sighits/sighits_genus/${i%_haplotig*}_sighits.txt
 done
@@ -714,7 +721,7 @@ echo -e "\e[97m########################################################\n \e[38;
 cd $proj_dir/metagenome/alignment
 echo -e "${YELLOW}- performing exact-matching algorithm"
 for i in $(ls *_haplotig_nd.megablast);do
-	awk '$6>=90' $i | awk '$7>=90' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_family/${i%_haplotig*}_filter.txt
+	awk '$6>=95' $i | awk '$7>=95' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_family/${i%_haplotig*}_filter.txt
 	awk 'NR==FNR {h[$1] = $2; next} {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,h[$1]}' ../haplotig/${i%_haplotig*}_normalized.txt ../sighits/sighits_family/${i%_haplotig*}_filter.txt | 
 	awk '{print $12,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11}' | awk 'gsub(" ","\t",$0)' > ../sighits/sighits_family/${i%_haplotig*}_sighits.txt
 done
