@@ -19,13 +19,7 @@ $ git clone https://github.com/B-Kristy/Qmatey.git
 ```
 
 ## Dependencies
-* R version compatible with the following dependencies: 
-   * ggplot2 
-   * plotly
-   * plyr
-   * dplyr
-   * htmlwidgets 
-   * car 
+* R version 3.5 or above
 * Java 
   * Try 'sudo apt install default-jre'
 * Datamash
@@ -36,10 +30,10 @@ $ git clone https://github.com/B-Kristy/Qmatey.git
 A project directory should contain the following sub-directories:
 * Input Sequences
   * This is where your QC-filtered sequencing data will go.
-* Host Genome
-  * This is where your host associated reference genome(s) will go. Reference genomes must be in **Fasta format**.
 * Configuration file
   * The format of the configuration file can be taken from the tools directory of the Qmatey Repository. 
+* **Optional**: Normalzation Reference Genomes **if you are normalizing data**
+  * This is where reference genomes for normalization will go. Reference genomes must be in **Fasta format**.
 ## Preparing A Database Directory for a Local BLAST
 If necessary, install the lftp tool to navigate NCBI's FTP site:
 ```
@@ -67,7 +61,7 @@ Your database directory should now have the desired, uncompressed database files
 Variable | Usage | Input
 -------------- | ------------------------------------------------------------------- | -----
 input_dir      | the path to QC-filtered sequencing data                             | /path to directory/
-host_dir        | the path to the host reference genomes                              | /path to directory/
+norm_ref_dir        | the path to the normalization reference genomes                              | /path to directory/
 threads        | the maximum number of subprocesses that can run simultaneously      | integer 
 tool_dir       | the path to Qmatey's tools                                          | /path to downloaded Qmatey repository/tools
 strain_level   | An option for strain-level taxonomic analysis                       | TRUE or FALSE
@@ -77,12 +71,13 @@ family_level   | An option for family-level taxonomic analysis                  
 blast_location | An option to perform BLAST locally or remotely                      | LOCAL or REMOTE
 local_db_dir   | the path to a local NCBI sequencing database on your desktop        | /path to directory/database name or NA
 remote_db_dir  | the NCBI database for remote BLAST performance                    | e.g. nt, 16s, nr, etc. or NA
+normalization  | An option for reference-based normalization                         | TRUE OR FALSE
 
 ## Usage 
 Before running Qmatey, make sure you have:
 * Created a project directory with all the required subdirectories
 * Have QC-filtered sequencing data in the appropriate input directory
-* Obtained a host-reference genome in .fastq format in the appropriate reference genome directory
+* **for normalization**: Obtained necessary reference genome(s) in .fasta format in the appropriate normalization reference genome directory
 * **for a local BLAST**: Obtained an NCBI database directory and have the uncompressed files in one directory
 * **for a remote BLAST**: identified an NCBI database directory online 
 * Have a correctly edited configuration file within the project directory 
