@@ -33,6 +33,9 @@ else
 	N=1 && loopthread=$threads
 fi
 
+cd $tool_dir
+tar -xf rankedlineage.tar.xz
+
 ##################################################################################################################
 #Check for existence of directories specified in config file
 [ -d "$tool_dir" ] || { echo -e "$tool_dir \e[31mnot found, exiting"; exit 1; }
@@ -47,13 +50,21 @@ mkdir haplotig
 mkdir alignment
 mkdir sighits
 mkdir results
-
+##################################################################################################################
+echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is installing R dependencies \n\e[97m########################################################\n"
+if R --version; then
+	:
+else
+	echo -e "\e[31mR not detected,exiting"
+	exit 1
+fi 
+Rscript $tool_dir/Rscripts/R_packages.R &>/dev/null
 #################################################################################################################
 host_norm () {
 	[ -d "$norm_ref_dir" ] || { echo -e "$norm_ref_dir \e[31mnot found, exiting"; exit 1; }
-	echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Perfroming Host Coverage Normalization \n\e[97m########################################################\n"
+	echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Perfroming Normalization \n\e[97m########################################################\n"
 	cd $norm_ref_dir
-	echo -e "${YELLOW}- indexing host reference genome${WHITE}"
+	echo -e "${YELLOW}- indexing normalization reference genome${WHITE}"
 	cat *.fa* > master_ref.fasta
 	$tool_dir/bwa-0.7.17/bwa index -a bwtsw master_ref.fasta
 	java -jar $tool_dir/picard-2.18.27.jar CreateSequenceDictionary REFERENCE=master_ref.fasta    OUTPUT=master_ref.dict
@@ -61,7 +72,7 @@ host_norm () {
 
 
 	cd $input_dir
-	echo -e "${YELLOW}- aligning input sequences to host reference genome${WHITE}"
+	echo -e "${YELLOW}- aligning input sequences to normalization reference genome${WHITE}"
 	for i in $(ls *.fa*); do
 		$tool_dir/bwa-0.7.17/bwa mem -t $loopthread $norm_ref_dir/master_ref.fasta $i > $proj_dir/metagenome/${i%.fa*}.sam && \
 		java -XX:ParallelGCThreads=$loopthread -jar $tool_dir/picard-2.18.27.jar SortSam I= $proj_dir/metagenome/${i%.fa*}.sam O= $proj_dir/metagenome/${i%.fa*}.bam SORT_ORDER=coordinate && \
@@ -69,7 +80,7 @@ host_norm () {
 	done
 
 	cd $proj_dir/metagenome
-	echo -e "${YELLOW}- extracting sequence reads that do not match the host reference genome (i.e. potential metagenomic data)${WHITE}"
+	echo -e "${YELLOW}- extracting sequence reads that do not match the normalization reference genome (i.e. potential metagenomic data)${WHITE}"
 	for i in $(ls *.bam); do
 		$tool_dir/samtools-1.9/samtools view -b -f4 $i > ${i%.*}_metagenome.bam && \
 		$tool_dir/samtools-1.9/samtools bam2fq ${i%.*}_metagenome.bam | gzip > ${i%.*}_metagenome.fastq.gz && \
@@ -99,7 +110,7 @@ host_norm () {
 	done
 	rm  *_seq.txt && rm *tempcov.txt && rm *_seqcov.txt
 
-	echo -e "${YELLOW}- calculating a host-coverage normalization factor"
+	echo -e "${YELLOW}- calculating a normalization factor"
 	cd $proj_dir/metagenome
 	touch host_coverage.txt
 	touch empty_host_coverage.txt
@@ -167,7 +178,7 @@ fi
 ##################################################################################################################
 #Reformat metagenomic sequences that bypass the host coverage normalization factor 
 bypass_host_norm () {
-	echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Bypassing Host Coverage Normalization \n\e[97m########################################################\n"
+	echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Bypassing Normalization \n\e[97m########################################################\n"
 	cd $input_dir
 	if [ "$data_type" == "FASTA" ]; then
 		echo -e "${YELLOW}- calculating metagenomic coverage" 
@@ -359,9 +370,10 @@ strain_level_uniq=strain_taxainfo_unique_sequences.txt
 strain_level_stderr=strain_taxainfo_quantification_accuracy.txt
 percent_thresh=5
 Rscript $tool_dir/Rscripts/strain_level_corr.R $strain_level_mean $percent_thresh &>/dev/null
+Rscript $tool_dir/Rscripts/strain_level_boxplots.R $strain_level_mean $strain_level_uniq $strain_level_stderr $percent_thresh &>/dev/null
 }
 if [ "$strain_level" == "TRUE" ]; then
-	time main 2> log.out
+	time main 2>> log.out
 fi
 ################################################################################################################
 
@@ -544,7 +556,7 @@ Rscript $tool_dir/Rscripts/species_level_corr.R $species_level_mean $percent_thr
 }
 
 if [ "$species_level" == "TRUE" ]; then
-	time main 2> log.out
+	time main 2>> log.out
 fi
 ################################################################################################################
 main() {
@@ -708,7 +720,7 @@ percent_thresh=5
 Rscript $tool_dir/Rscripts/genus_level_corr.R $genus_level_mean $percent_thresh &>/dev/null
 }
 if [ "$genus_level" == "TRUE" ]; then
-	time main 2> log.out
+	time main 2>> log.out
 fi
 ################################################################################################################
 main() {
@@ -882,9 +894,11 @@ Rscript $tool_dir/Rscripts/family_level_corr.R $family_level_mean $percent_thres
 }
 ################################################################################################################
 if [ "$family_level" == "TRUE" ]; then
-	time main 2> log.out
+	time main 2>> log.out
 fi
 
+cd $tool_dir
+rm rankedlineage.dmp && rm rankedlineage_edited.dmp
 
 
 

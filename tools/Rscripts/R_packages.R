@@ -1,0 +1,12 @@
+install.packages("plyr")
+install.packages("dplyr")
+install.packages("car")
+install.packages("MASS")
+install.packages("data.table")
+install.packages("ggplot2")
+install.packages("ggcorrplot")
+install.packages("reshape")
+install.packages("stringr")
+install.packages("plotly")
+install.packages("htmlwidgets")
+
