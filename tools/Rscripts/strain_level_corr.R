@@ -1,6 +1,6 @@
 # Load libraries
 library(plyr); library(dplyr)
-library(car)
+library(carData)
 library(car)
 library(MASS)
 library(data.table)
@@ -26,9 +26,11 @@ for (i in c(percent)) {
   metag_corr <- melt(metag_corr)
   metag_pmat <- cor_pmat(metag, method = c("spearman"), exact=FALSE)
   metag_pmat <- melt(metag_pmat)
-  corr <- merge(metag_corr, metag_pmat, by=c("X1","X2"))
+  corr <- cbind(metag_corr, metag_pmat)
+  corr <- subset(corr, select=-c(4:5))
   colnames(corr) <- c("Var1","Var2","coeff","pvalue")
   corr <- subset(corr, pvalue <= 0.05)
+
 
   
   plot <- ggplot(corr, aes(x=Var1, y=Var2, fill=coeff, size= circle_size)) +

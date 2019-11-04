@@ -25,7 +25,6 @@ main &> log.out
 if [ -z "$threads" ]; then
 	threads=$(nproc --all)
 fi
-threads=$((threads-2))
 if  [[ "$threads" -gt 1 ]]; then
 	loopthread=2
 	N=$(($threads/2))
@@ -153,7 +152,7 @@ host_norm () {
 	echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Perfroming BLAST \n\e[97m########################################################\n"
 	cd $proj_dir/metagenome/haplotig
 	if [ "$blast_location" == "LOCAL" ]; then
-	echo -e "${YELLOW}- performing a local BLAST"
+	echo -e "${YELLOW}- preforming a local BLAST"
 		for i in $(ls *_haplotig.fasta);do
 
 			$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $local_db_dir -num_threads $threads -evalue 1e-10 -max_target_seqs 5 -outfmt \
@@ -162,7 +161,7 @@ host_norm () {
 		done
 	fi
 	if [ "$blast_location" == "REMOTE" ]; then 
-	echo -e "${YELLOW}- performing a remote BLAST"
+	echo -e "${YELLOW}- preforming a remote BLAST"
 		for i in $(ls *_haplotig.fasta);do
 			$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $remote_db_dir -evalue 1e-10 -max_target_seqs 5 -outfmt \
 			"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" \
@@ -201,10 +200,10 @@ bypass_host_norm () {
 			awk -v normfactor=$normfactor '{print $1,$2 * normfactor}' $i | awk 'gsub(" ", "\t", $0)' > ${i%_haplocov*}_normalized.txt
 		done
 			
-		echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Perfroming BLAST \n\e[97m########################################################\n"
+		echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Preforming BLAST \n\e[97m########################################################\n"
 		cd $input_dir
 		if [ "$blast_location" == "LOCAL" ]; then
-			echo -e "${YELLOW}- performing a local BLAST"
+			echo -e "${YELLOW}- preforming a local BLAST"
 				for i in $(ls *.fa*);do
 					$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $local_db_dir -num_threads $threads -evalue 1e-10 -max_target_seqs 5 -outfmt \
 					"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" \
@@ -212,7 +211,7 @@ bypass_host_norm () {
 				done
 		fi
 		if [ "$blast_location" == "REMOTE" ]; then 
-		echo -e "${YELLOW}- performing a remote BLAST"
+		echo -e "${YELLOW}- preforming a remote BLAST"
 				for i in $(ls *.fa*);do
 					$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $remote_db_dir -evalue 1e-10 -max_target_seqs 5 -outfmt \
 					"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" \
@@ -257,9 +256,9 @@ bypass_host_norm () {
 			awk -v normfactor=$normfactor '{print $1,$2 * normfactor}' $i | awk 'gsub(" ", "\t", $0)' > ${i%_haplocov*}_normalized.txt
 		done
 		cd $proj_dir/metagenome/haplotig
-		echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Perfroming BLAST \n\e[97m########################################################\n"
+		echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Preforming BLAST \n\e[97m########################################################\n"
 		if [ "$blast_location" == "LOCAL" ]; then
-		echo -e "${YELLOW}- performing a local BLAST"
+		echo -e "${YELLOW}- preforming a local BLAST"
 			for i in $(ls *.fasta);do
 				$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $local_db_dir -num_threads $threads -evalue 1e-10 -max_target_seqs 5 -outfmt \
 				"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" \
@@ -267,7 +266,7 @@ bypass_host_norm () {
 			done
 		fi
 		if [ "$blast_location" == "REMOTE" ]; then 
-		echo -e "${YELLOW}- performing a remote BLAST"
+		echo -e "${YELLOW}- preforming a remote BLAST"
 			for i in $(ls *.fasta);do
 				$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $remote_db_dir -evalue 1e-10 -max_target_seqs 5 -outfmt \
 				"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" \
@@ -304,9 +303,9 @@ mkdir sighits_strain
 cd $proj_dir/metagenome/results
 mkdir strain_level
 cp seqcov.txt ./strain_level
-echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Perfroming Strain-Level Classification \n\e[97m########################################################\n"
+echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Preforming Strain-Level Classification \n\e[97m########################################################\n"
 cd $proj_dir/metagenome/alignment
-	echo -e "${YELLOW}- performing exact-matching algorithm"
+	echo -e "${YELLOW}- preforming exact-matching algorithm"
 	for i in $(ls *_haplotig_nd.megablast);do
 		awk '$6>=100' $i | awk '$7>=100' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_strain/${i%_haplotig*}_filter.txt
 		awk 'NR==FNR {h[$1] = $2; next} {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,h[$1]}' ../haplotig/${i%_haplotig*}_normalized.txt ../sighits/sighits_strain/${i%_haplotig*}_filter.txt | 
@@ -383,9 +382,9 @@ mkdir sighits_species
 cd $proj_dir/metagenome/results
 mkdir species_level
 cp seqcov.txt ./species_level
-echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Perfroming Species-Level Classification \n\e[97m########################################################\n"
+echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Preforming Species-Level Classification \n\e[97m########################################################\n"
 cd $proj_dir/metagenome/alignment
-echo -e "${YELLOW}- performing exact-matching algorithm"
+echo -e "${YELLOW}- preforming exact-matching algorithm"
 for i in $(ls *_haplotig_nd.megablast);do
 	awk '$6>=97' $i | awk '$7>=97' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_species/${i%_haplotig*}_filter.txt
 	awk 'NR==FNR {h[$1] = $2; next} {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,h[$1]}' ../haplotig/${i%_haplotig*}_normalized.txt ../sighits/sighits_species/${i%_haplotig*}_filter.txt | 
@@ -442,7 +441,7 @@ for i in $(ls *_dup.txt);do
 	paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12}' OFS='\t' $i ) <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9}' OFS='\t' ${i%*_dup.txt}_species_taxa.txt) > ${i%_dup*}_species_duplicates_virome.txt
 done
 for i in $(ls *_species_duplicates_virome.txt);do
-	awk -F '\t' '{ if ($21!="Viruses") print $0}' $i > ${i%*_species_duplicates_virome*}_species_duplicates.txt
+	awk -F '\t' '{ if ($21!="Viruses") print $0}' $i | awk -F '\t' '!/Uncultured/' > ${i%*_species_duplicates_virome*}_species_duplicates.txt
 done
 rm *_species_taxid.txt && rm *_dup_inter.txt && rm *_dup.txt && rm *_species_column.txt && rm *_species_taxa.txt && rm *_species_duplicates_virome.txt
 for i in $(ls *_species_duplicates.txt);do
@@ -566,9 +565,9 @@ cd $proj_dir/metagenome/results
 mkdir genus_level
 cp seqcov.txt ./genus_level
 
-echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Perfroming Genus-Level Classification \n\e[97m########################################################\n"
+echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Preforming Genus-Level Classification \n\e[97m########################################################\n"
 cd $proj_dir/metagenome/alignment
-echo -e "${YELLOW}- performing exact-matching algorithm"
+echo -e "${YELLOW}- preforming exact-matching algorithm"
 for i in $(ls *_haplotig_nd.megablast);do
 	awk '$6>=97' $i | awk '$7>=97' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_genus/${i%_haplotig*}_filter.txt
 	awk 'NR==FNR {h[$1] = $2; next} {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,h[$1]}' ../haplotig/${i%_haplotig*}_normalized.txt ../sighits/sighits_genus/${i%_haplotig*}_filter.txt | 
@@ -614,10 +613,14 @@ for i in $(ls *_species_column.txt);do
 done
 
 for i in $(ls *_dup.txt);do
-	paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12}' OFS='\t' $i ) <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9}' OFS='\t' ${i%*_dup.txt}_species_taxa.txt) > ${i%_dup*}_genus_duplicates.txt
+	paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12}' OFS='\t' $i ) <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9}' OFS='\t' ${i%*_dup.txt}_species_taxa.txt) > ${i%_dup*}_genus_duplicates_uncultured.txt
 done
 
 rm *_species_taxid.txt && rm *_dup_inter.txt && rm *_dup.txt && rm *_species_column.txt && rm *_species_taxa.txt
+for i in $(ls *_genus_duplicates_uncultured.txt);do
+	awk -F '\t' '!/Uncultured/' $i > ${i%*_genus_duplicates_uncultured*}_genus_duplicates.txt
+done
+rm *_genus_duplicates_uncultured.txt
 for i in $(ls *_genus_duplicates.txt);do
 	(
 	awk -F '\t' '{print $1, $2"~"$15, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $16, $17, $18, $19, $20, $21}' OFS='\t' $i > ${i%_genus_duplicates*}_genus_inter.txt
@@ -729,9 +732,9 @@ mkdir sighits_family
 cd $proj_dir/metagenome/results
 mkdir family_level
 cp seqcov.txt ./family_level
-echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Perfroming Family-Level Classification \n\e[97m########################################################\n"
+echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Preforming Family-Level Classification \n\e[97m########################################################\n"
 cd $proj_dir/metagenome/alignment
-echo -e "${YELLOW}- performing exact-matching algorithm"
+echo -e "${YELLOW}- preforming exact-matching algorithm"
 for i in $(ls *_haplotig_nd.megablast);do
 	awk '$6>=95' $i | awk '$7>=95' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_family/${i%_haplotig*}_filter.txt
 	awk 'NR==FNR {h[$1] = $2; next} {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,h[$1]}' ../haplotig/${i%_haplotig*}_normalized.txt ../sighits/sighits_family/${i%_haplotig*}_filter.txt | 
@@ -782,9 +785,13 @@ for i in $(ls *_species_column.txt);do
 	paste <(awk '{print $0}' OFS='\t' $i) <(awk -F '\t' '{print $1, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' ${i%_species_column*}_species_taxid.txt) | awk -F '\t' '{print $2, $1, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' > ${i%_species_column*}_species_taxa.txt
 done
 for i in $(ls *_dup.txt);do
-	paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12}' OFS='\t' $i ) <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9}' OFS='\t' ${i%*_dup.txt}_species_taxa.txt) > ${i%_dup*}_family_duplicates.txt
+	paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12}' OFS='\t' $i ) <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9}' OFS='\t' ${i%*_dup.txt}_species_taxa.txt) > ${i%_dup*}_family_duplicates_uncultured.txt
 done
 rm *_species_taxid.txt && rm *_dup_inter.txt && rm *_dup.txt && rm *_species_column.txt && rm *_species_taxa.txt
+for i in $(ls *_family_duplicates_uncultured.txt);do
+	awk -F '\t' '!/Uncultured/' $i > ${i%*_family_duplicates_uncultured*}_family_duplicates.txt
+done
+rm *_family_duplicates_uncultred.txt
 for i in $(ls *_family_duplicates.txt);do
 	(
 	awk -F '\t' '{print $1, $2"~"$16, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $16, $17, $18, $19, $20, $21}' OFS='\t' $i > ${i%_family_duplicates*}_family_inter.txt
