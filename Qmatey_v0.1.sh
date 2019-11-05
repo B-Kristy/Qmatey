@@ -20,7 +20,7 @@ else
 	exit 1
 fi 
 }
-main &> log.out
+main &> $proj_dir/log.out
 
 if [ -z "$threads" ]; then
 	threads=$(nproc --all)
@@ -172,7 +172,7 @@ host_norm () {
 }
 
 if [ "$normalization" == "TRUE" ]; then
-	time host_norm 2>> log.out
+	time host_norm 2>> $proj_dir/log.out
 fi
 ##################################################################################################################
 #Reformat metagenomic sequences that bypass the host coverage normalization factor 
@@ -279,7 +279,7 @@ bypass_host_norm () {
 }
 
 if [ "$normalization" == "FALSE" ]; then
-	time bypass_host_norm 2>> log.out
+	time bypass_host_norm 2>> $proj_dir/log.out
 fi
 
 
@@ -372,7 +372,7 @@ Rscript $tool_dir/Rscripts/strain_level_corr.R $strain_level_mean $percent_thres
 Rscript $tool_dir/Rscripts/strain_level_boxplots.R $strain_level_mean $strain_level_uniq $strain_level_stderr $percent_thresh &>/dev/null
 }
 if [ "$strain_level" == "TRUE" ]; then
-	time main 2>> log.out
+	time main 2>> $proj_dir/log.out
 fi
 ################################################################################################################
 
@@ -555,7 +555,7 @@ Rscript $tool_dir/Rscripts/species_level_corr.R $species_level_mean $percent_thr
 }
 
 if [ "$species_level" == "TRUE" ]; then
-	time main 2>> log.out
+	time main 2>> $proj_dir/log.out
 fi
 ################################################################################################################
 main() {
@@ -723,7 +723,7 @@ percent_thresh=5
 Rscript $tool_dir/Rscripts/genus_level_corr.R $genus_level_mean $percent_thresh &>/dev/null
 }
 if [ "$genus_level" == "TRUE" ]; then
-	time main 2>> log.out
+	time main 2>> $proj_dir/log.out
 fi
 ################################################################################################################
 main() {
@@ -901,7 +901,7 @@ Rscript $tool_dir/Rscripts/family_level_corr.R $family_level_mean $percent_thres
 }
 ################################################################################################################
 if [ "$family_level" == "TRUE" ]; then
-	time main 2>> log.out
+	time main 2>> $proj_dir/log.out
 fi
 
 cd $tool_dir
