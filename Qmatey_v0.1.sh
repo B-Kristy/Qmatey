@@ -191,7 +191,7 @@ bypass_host_norm () {
 		rm *_seq.txt & rm *tempcov.txt
 		cd $input_dir
 		for i in $(ls *.f*);do
-			awk < $i '/^>/ { print $0, 1}' > ../metagenome/haplotig/${i%.*}_haplocov.txt
+			awk < $i '/^>/ { print $0, 1}' | awk  'gsub(">", "", $0)' > ../metagenome/haplotig/${i%.*}_haplocov.txt
 		done
 		cd $proj_dir/metagenome/haplotig
 		for i in $(ls *_haplocov.txt);do
@@ -370,6 +370,9 @@ strain_level_stderr=strain_taxainfo_quantification_accuracy.txt
 percent_thresh=5
 Rscript $tool_dir/Rscripts/strain_level_corr.R $strain_level_mean $percent_thresh &>/dev/null
 Rscript $tool_dir/Rscripts/strain_level_boxplots.R $strain_level_mean $strain_level_uniq $strain_level_stderr $percent_thresh &>/dev/null
+mkdir boxplots
+mv *_files $proj_dir/metagenome/results/strain_level/boxplots
+mv *.html $proj_dir/metagenome/results/strain_level/boxplots
 }
 if [ "$strain_level" == "TRUE" ]; then
 	time main 2>> $proj_dir/log.out
@@ -397,36 +400,37 @@ for i in $(ls *_sighits.txt);do
 done
 echo -e "${YELLOW}- compiling species-level OTUs with multi-alignment algorithm"
 cd $proj_dir/metagenome/sighits/sighits_species
-for i in $(ls *_sighits.txt);do
+	for i in $(ls *_sighits.txt);do
 	(
 	awk -F '\t' 'FNR==NR{a[$1,$2]=1; next}  !a[$1,$2]' ${i%_sighits*}_species_unique_reads.txt $i OFS='\t' > ${i%_sighits*}_dup.txt
+	wait
 	) &
 	if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
 		wait
 	fi
-done
+	done
 cd $proj_dir/metagenome/sighits/sighits_species
 for i in $(ls *_dup.txt);do
 	awk -F '\t' '{print $11}' OFS=';' $i > ${i%_dup*}_taxids_dup_inter.txt
 done
-for i in $(ls *_dup_inter.txt);do
+	for i in $(ls *_dup_inter.txt);do
 	(
 	awk -F ';' '{print $1}' OFS='\t' $i > ${i%_taxids_dup_inter*}_taxids_dup.txt
 	) & 
 	if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
 		wait
 	fi
-done
+	done
 rm *_taxids_dup_inter.txt
 cd $proj_dir/metagenome/sighits/sighits_species
-for i in $(ls *_taxids_dup.txt);do
+	for i in $(ls *_taxids_dup.txt);do
 	(
 	awk -F '\t' 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' $tool_dir/rankedlineage_edited.dmp OFS='\t' $i> ${i%_taxids_dup*}_dup_inter.txt 
 	) &
 	if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
 		wait
 	fi
-done
+	done
 for i in $(ls *_dup_inter.txt);do
 	awk -F '\t'  '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' $i > ${i%_dup_inter*}_species_taxid.txt
 done

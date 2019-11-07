@@ -102,8 +102,8 @@ uniq_box<-function(df, dfu){
   
   u<-plot_ly(reform, x = ~`Unique Reads`, y = ~taxid, color = ~Phylum, type = "box")%>%layout(title = "Boxplot of Unique Reads with Outliers", xaxis = list(range=c(0,xlim), title = "Unique Reads"), yaxis = list(size = 1, title = "Taxaname"))
   list(u,r)
-  htmlwidgets::saveWidget(as_widget(r),"strain_level_unique_reads.html")
-  htmlwidgets::saveWidget(as_widget(u), "strain_level_outliers_unique_reads.html")
+  htmlwidgets::saveWidget(as_widget(r),"strain_level_unique_reads.html", selfcontained=FALSE)
+  htmlwidgets::saveWidget(as_widget(u), "strain_level_outliers_unique_reads.html", selfcontained=FALSE)
 }
 uniq_box(df, dfu)
 
@@ -134,8 +134,8 @@ mean_box<-function(df, dfm){
   
   u<-plot_ly(reform, x = ~`covMean`, y = ~taxid, color = ~Phylum, type = "box")%>%layout(title = "Boxplot of Mean Reads with Outliers", xaxis = list(range=c(0,xlim), title = "Mean Reads"), yaxis = list(size = 1, title = "Taxaname"))
   list(u,r)
-  htmlwidgets::saveWidget(as_widget(r),"strain_level_mean_reads.html")
-  htmlwidgets::saveWidget(as_widget(u), "strain_level_outliers_mean_reads.html")
+  htmlwidgets::saveWidget(as_widget(r),"strain_level_mean_reads.html", selfcontained = FALSE)
+  htmlwidgets::saveWidget(as_widget(u), "strain_level_outliers_mean_reads.html", selfcontained = FALSE)
 }
 mean_box(df, dfm)
 
@@ -166,8 +166,8 @@ error_box<-function(df, dfe){
   
   u<-plot_ly(reform, x = ~errors, y = ~taxid, color = ~Phylum, type = "box")%>%layout(title= "Boxplot of Standard Error with Outliers", xaxis = list(titlerange=c(0,xlim), title = "Standard Error"), yaxis = list(size = 1, title = "Taxaname"))
   list(u,r)
-  htmlwidgets::saveWidget(as_widget(r),"strain_level_errors.html")
-  htmlwidgets::saveWidget(as_widget(u), "strain_level_outliers_errors.html")
+  htmlwidgets::saveWidget(as_widget(r),"strain_level_errors.html", selfcontained = FALSE)
+  htmlwidgets::saveWidget(as_widget(u), "strain_level_outliers_errors.html", selfcontained = FALSE)
 }
 error_box(df, dfe)
   
