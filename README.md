@@ -7,7 +7,7 @@ Qmatey is undergoing testing and will be available for public use. If you have a
 A taxonomic profiler capable of robust microbiome analysis 
 ## Features
 * Automated pipeline starting with QC-filtered sequencing data and ending with microbiome quantification and visualization
-* Supports all Next-Generation Sequencing platforms, including 16S/ITS amplicon sequencing, Whole-Genome shotgun sequencing, and reduced representation sequencing.
+* Supports all Next-Generation Sequencing strategies, including 16S/ITS amplicon sequencing, Whole-Genome shotgun sequencing, and reduced representation sequencing.
 * User-defined parameters for strain-level, species-level, genus-level, and family-level taxonomic analysis 
 * QC-plots to evaluate the predictive accuracy of quantified metagenomic data
 
