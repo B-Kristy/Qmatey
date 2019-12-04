@@ -1,5 +1,5 @@
 # Initial Testing 
-Qmatey is undergoing testing and will be available for public use. If you have any feedback pertaining to Qmatey's operation, please contact bkristy@vols.utk.edu or bolukolu@utk.edu.
+Qmatey is undergoing testing and will be available for public use. If you have any feedback pertaining to Qmatey's operation, please contact Brandon Kristy or Bode Olukolu (bkristy@vols.utk.edu or bolukolu@utk.edu.
 
 ![alt text](https://github.com/B-Kristy/logo/blob/master/Qmatey_logo.PNG)
 
