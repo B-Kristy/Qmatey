@@ -60,6 +60,7 @@ Your database directory should now have the desired, uncompressed database files
 
 Variable | Usage | Input
 -------------- | ------------------------------------------------------------------- | -----
+data_type      |  the type of data in your input_dir                                 | FASTQ or FASTA
 input_dir      | the path to QC-filtered sequencing data                             | /path to directory/
 norm_ref_dir        | the path to the normalization reference genomes                              | /path to directory/
 threads        | the maximum number of subprocesses that can run simultaneously      | integer 
