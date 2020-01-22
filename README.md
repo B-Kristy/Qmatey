@@ -69,6 +69,9 @@ strain_level   | An option for strain-level taxonomic analysis                  
 species_level  | An option for species-level taxonomic analysis                      | TRUE or FALSE
 genus_level    | An option for genus-level taxonomic analysis                        | TRUE or FALSE
 family_level   | An option for family-level taxonomic analysis                       | TRUE or FALSE
+order_level    | An option for order-level taxonomic analysis                        | TRUE or FALSE
+class_level    | An option for class-level taxonomic analysis                        | TRUE or FALSE
+phylum_level   | An option for phylum-level taxonomic analysis                       | True or FALSE
 blast_location | An option to perform BLAST locally or remotely                      | LOCAL or REMOTE
 local_db_dir   | the path to a local NCBI sequencing database on your desktop        | /path to directory/database name or NA
 remote_db_dir  | the NCBI database for remote BLAST performance                    | e.g. nt, 16s, nr, etc. or NA
