@@ -12,7 +12,7 @@ args <- commandArgs(TRUE)
 
 percent <- args[2]
 percent <- as.numeric(percent)
-genus <- read.table("genus_taxainfo_mean.txt", header = T, sep="\t", check.names=FALSE, fill=TRUE)
+genus <- read.table(args[1], header = T, sep="\t", check.names=FALSE, fill=TRUE)
 
 
 for (i in c(percent)) {
@@ -43,5 +43,5 @@ for (i in c(percent)) {
           plot.title = element_text(size=axis_density)) +
     labs(title= "Genus-Level Correlogram")
   ggsave(filename=paste("Metagenome",i,"_genus_corr_spearman.tiff",sep=""), plot=plot, width=35, height=35, dpi=600, compression = "lzw", limitsize = FALSE)
-  }
+   }
   

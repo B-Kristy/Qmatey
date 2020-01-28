@@ -11,7 +11,7 @@ library(stringr)
 args <- commandArgs(TRUE)
 percent <- args[2]
 percent <- as.numeric(percent)
-species <- read.table("species_taxainfo_mean.txt", header = T, sep="\t", check.names=FALSE, fill=TRUE)
+species <- read.table(args[1], header = T, sep="\t", check.names=FALSE, fill=TRUE)
 
 
 for (i in c(percent)) {
