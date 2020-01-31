@@ -331,20 +331,24 @@ main() {
 	awk '{print $1}' rankedlineage_subhits.txt > ../../results/strain_level/strain_taxa_unique_sequences.txt
 	awk '{print $1}' rankedlineage_subhits.txt > ../../results/strain_level/strain_taxa_quantification_accuracy.txt
 	echo -e "${YELLOW}- quantifying the strain-level taxonomy" 
-	for i in $(ls *_sighits_nr.txt); do
-		cut -f 1,11 $i | awk '{print $2,"\t",$1}' | datamash --header-in --sort --group 1 mean 2 sstdev 2 count 2 | \
-		awk '{ print $1,"\t",$2,"\t",$4,"\t",((($3/sqrt($4))/$2)*100) }' > stats1.txt
-		echo $'tax_id\tmean\tuniq_reads\tstderr' | cat - stats1.txt > stats2.txt
+	for i in $(ls *_sighits_nr.txt);do
+		Rscript $tool_dir/Rscripts/stats_summary.R $i
+		echo $'tax_id\tmean\tuniq_reads\tstderr' | cat - stats1.txt > stats2.txt 
 		id=${i%_sighits*}_mean && awk -v id=$id '{gsub(/mean/,id); print }' stats2.txt | awk '{print $1,"\t",$2}' > holdmean.txt
-		awk 'FNR==NR{a[$1]=$2;next}{if(a[$1]==""){a[$1]=0}; print $0, a[$1]}'  holdmean.txt ../../results/strain_level/strain_taxa_mean.txt > holdmean2.txt && cat holdmean2.txt > ../../results/strain_level/strain_taxa_mean.txt
+		awk 'FNR==NR{a[$1]=$2;next}{if(a[$1]==""){a[$1]=0}; print $0, a[$1]}'  holdmean.txt strain_taxa_mean_temp.txt > holdmean2.txt && cat holdmean2.txt > strain_taxa_mean_temp.txt
 		id=${i%_sighits*}_uniq_reads && awk -v id=$id '{gsub(/uniq_reads/,id); print }' stats2.txt | awk '{print $1,"\t",$3}' > holduniq_reads.txt
-		awk 'FNR==NR{a[$1]=$2;next}{if(a[$1]==""){a[$1]=0}; print $0, a[$1]}'  holduniq_reads.txt ../../results/strain_level/strain_taxa_unique_sequences.txt > holduniq_reads2.txt && cat holduniq_reads2.txt > ../../results/strain_level/strain_taxa_unique_sequences.txt
+		awk 'FNR==NR{a[$1]=$2;next}{if(a[$1]==""){a[$1]=0}; print $0, a[$1]}'  holduniq_reads.txt strain_taxa_unique_sequences_temp.txt > holduniq_reads2.txt && cat holduniq_reads2.txt > strain_taxa_unique_sequences_temp.txt
 		id=${i%_sighits*}_stderr && awk -v id=$id '{gsub(/stderr/,id); print }' stats2.txt | awk '{print $1,"\t",$4}' > holdstderr.txt
-		awk 'FNR==NR{a[$1]=$2;next}{if(a[$1]==""){a[$1]=0}; print $0, a[$1]}'  holdstderr.txt ../../results/strain_level/strain_taxa_quantification_accuracy.txt > holdstderr2.txt && cat holdstderr2.txt > ../../results/strain_level/strain_taxa_quantification_accuracy.txt
+		awk 'FNR==NR{a[$1]=$2;next}{if(a[$1]==""){a[$1]=0}; print $0, a[$1]}'  holdstderr.txt strain_taxa_quantification_accuracy_temp.txt > holdstderr2.txt && cat holdstderr2.txt > strain_taxa_quantification_accuracy_temp.txt
 		awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print $1,"\t",$2,"\t",$3,"\t",$4,"\t", a[$1]}'  rankedlineage_subhits.txt stats2.txt > stats3.txt
 		awk '{print $1,$2,$3,$4,$6,$7,$8,$9,$10,$11,$12,$13,$14 }' stats3.txt | awk '{gsub(/ /,"\t"); print }' > ${i%_sighits*}_taxastats.txt
 		rm *stats1* *stats2* *stats3* *hold*
 	done
+		
+	awk 'NR==1; NR > 1 {s=0; for (i=2;i<=NF;i++) s+=$i; if (s!=0)print}' strain_taxa_mean_temp.txt > ../../results/strain_level/strain_taxa_mean.txt
+	awk 'NR==1; NR > 1 {s=0; for (i=2;i<=NF;i++) s+=$i; if (s!=0)print}' strain_taxa_unique_sequences_temp.txt > ../../results/strain_taxa_unique_sequences.txt
+	awk 'NR==1; NR > 1 {s=0; for (i=2;i<=NF;i++) s+=$i; if (s!=0)print}' strain_taxa_quantification_accuracy_temp.txt > ../../results/strain_taxa_quantification_accuracy.txt
+	rm *_temp.txt
 	cd $proj_dir/metagenome/results/strain_level
 	i="_mean$"
 	awk -vp="$i" 'NR==1{for(i=1; i<=NF; i++) if ($i~p) {a[i]++;} } { for (i in a) printf "%s\t", $i; printf "\n"}' strain_taxa_mean.txt > temp_mean.txt
