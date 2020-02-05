@@ -762,7 +762,7 @@ main() {
 	done
 	cd $proj_dir/metagenome/sighits/sighits_family
 	for i in $(ls *_sighits.txt);do
-			awk -F'|' 'FNR==NR{a[$1,$2]=1; next}  !a[$1,$2]' ${i%_sighits.txt}_family_unique_reads.txt $i > ${i%_sighits*}_dup.txt
+		awk -F'|' 'FNR==NR{a[$1,$2]=1; next}  !a[$1,$2]' ${i%_sighits.txt}_family_unique_reads.txt $i > ${i%_sighits*}_dup.txt
 	done
 	cd $proj_dir/metagenome/sighits/sighits_family
 	for i in $(ls *_dup.txt);do
@@ -777,7 +777,7 @@ main() {
 	cd $proj_dir/metagenome/sighits/sighits_family
 	for i in $(ls *_taxids_dup.txt);do
 		(
-		awk -F '\t' 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' /home/brandon/Desktop/Qmatey/tools/rankedlineage_edited.dmp OFS='\t' $i> ${i%_taxids_dup*}_dup_inter.txt
+		awk -F '\t' 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' $tool_dir/rankedlineage_edited.dmp OFS='\t' $i> ${i%_taxids_dup*}_dup_inter.txt
 		) &
 		if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
 			wait
@@ -805,7 +805,7 @@ main() {
 	for i in $(ls *_family_duplicates_uncultured.txt);do
 		awk -F '\t' '!/Uncultured/' $i > ${i%*_family_duplicates_uncultured*}_family_duplicates.txt
 	done
-	rm *_family_duplicates_uncultred.txt
+	rm *_family_duplicates_uncultured.txt
 	for i in $(ls *_family_duplicates.txt);do
 		(
 		awk -F '\t' '{print $1, $2"~"$16, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $16, $17, $18, $19, $20, $21}' OFS='\t' $i > ${i%_family_duplicates*}_family_inter.txt
@@ -840,54 +840,112 @@ main() {
 	done
 	for i in $(ls *_multialign_family_reads.txt);do
 		(
-		awk -F '\t'  'FNR==NR {a[$1]; next}; $1 in a' $i ${i%_multialign_family_reads*}_family_inter2.txt | sort -u -k1,1 | awk 'gsub("~","\t",$0)'| awk -F '\t' '{print $3, $1, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13}' OFS='\t' > ${i%_multialign_family_reads*}_family_OTU.txt
+		awk -F '\t'  'FNR==NR {a[$1]; next}; $1 in a' $i ${i%_multialign_family_reads*}_family_inter2.txt | sort -u -k1,1 | awk 'gsub("~","\t",$0)'| awk -F '\t' '{print $3, $1, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21}' OFS='\t' > ${i%_multialign_family_reads*}_family_OTU.txt
+		) &
+		if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
+		wait
+		fi
+	done
+##############################################################################################
+	for i in $(ls *_family_unique_reads.txt);do
+		awk -F '\t' '{print $11}' OFS=';' $i > ${i%_family_unique_reads*}_taxids_uniq_inter.txt
+	done
+
+	for i in $(ls *_uniq_inter.txt);do
+		awk -F ';' '{print $1}' OFS='\t' $i > ${i%_taxids_uniq_inter*}_taxids_uniq.txt
+	done
+
+	rm *_taxids_uniq_inter.txt
+	cd $proj_dir/metagenome/sighits/sighits_family
+	for i in $(ls *_taxids_uniq.txt);do
+		(
+		awk -F '\t' 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' $tool_dir/rankedlineage_edited.dmp OFS='\t' $i> ${i%_taxids_uniq*}_uniq_inter.txt
+		) &
+		if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
+			wait
+		fi 
+	done
+	for i in $(ls *_uniq_inter.txt);do
+		(
+		awk -F '\t'  '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' $i > ${i%_uniq_inter*}_species_taxid.txt
 		) &
 		if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
 			wait
 		fi
 	done
+	rm *_taxids_uniq.txt
+	for i in $(ls *_species_taxid.txt);do
+		awk -F '\t' '{print $1}' $i | awk -F ' ' '{print $1, $2}' > ${i%_species_taxid*}_species_column.txt
+	done
+	for i in $(ls *_species_column.txt);do
+		paste <(awk '{print $0}' OFS='\t' $i) <(awk -F '\t' '{print $1, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' ${i%_species_column*}_species_taxid.txt) | awk -F '\t' '{print $2, $1, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' > ${i%_species_column*}_species_taxa.txt
+	done
+	for i in $(ls *_unique_reads.txt);do
+		paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12}' OFS='\t' $i ) <(awk -F '\t' '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' ${i%*_family_unique_reads*}_species_taxa.txt) > ${i%_uniq*}_family_unique_uncultured.txt
+	done
+	rm *_species_taxid.txt && rm *_uniq_inter.txt && rm *_uniq.txt && rm *_species_column.txt && rm *_species_taxa.txt
+	for i in $(ls *_family_unique_uncultured.txt);do
+		awk -F '\t' '!/Uncultured/' $i > ${i%*_family_unique_uncultured*}_family_unique_sequences.txt
+	done
+	rm *_family_unique_uncultured.txt &&
+
+
+##############################################################################################
 	rm *_family_inter.txt && rm *_family_inter2.txt && rm *_duplicate_count.txt && rm *_multialign_family_reads.txt && rm *_family_duplicates.txt
 	for i in $(ls *_family_OTU.txt);do
 		(
-		cat $i ${i%_family_OTU*}_family_unique_reads.txt > ${i%_family_OTU*}_complete_family_reads.txt
+		cat $i ${i%_family_OTU*}_family_family_unique_sequences.txt > ${i%_family_OTU*}_complete_family_reads.txt
 		) &
 		if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
 			wait
 		fi
-	done 
+	done
+	rm *_family_family_unique_sequences.txt && rm *_family_OTU.txt && rm *_family_unique_reads.txt
 	for i in $(ls *_complete_family_reads.txt);do
-		awk '{ for(i=1;i<=NF;i++){if(i==NF){printf("%s\n",$NF);}else {printf("%s\t",$i)}}}' $i > ${i%_complete_family_reads*}_sighits_temp.txt
-		echo $'abundance\tqseqid\tsseqid\tlength\tmismatch\tevalue\tpident\tqcovs\tqseq\tsseq\tstaxids\tstitle' | \
+		awk -F '\t' '{ for(i=1;i<=NF;i++){if(i==NF){printf("%s\n",$NF);}else {printf("%s\t",$i)}}}' $i > ${i%_complete_family_reads*}_sighits_temp.txt
+		echo $'abundance\tqseqid\tsseqid\tlength\tmismatch\tevalue\tpident\tqcovs\tqseq\tsseq\tstaxids\tstitle\tspecies\tgenus\tfamily\torder\tclass\tphylum\tkingdom\tdomain' | \
 		cat - ${i%_complete_family_reads*}_sighits_temp.txt > ${i%_complete_family_reads*}_sighits.txt
 	done
-	rm *_complete_family_reads.txt && rm *_sighits_temp.txt && rm *_family_OTU.txt && rm *_unique_reads.txt
 	cd $proj_dir/metagenome/sighits/sighits_family
 	echo -e "${YELLOW}- compiling taxonomic information"
 	find . -type f -name '*_sighits.txt' -exec cat {} + > sighits.txt
 	awk '{print $11}' sighits.txt | awk '{gsub(";","\n"); print}' | sort -u -n | sed -e '1s/staxids/tax_id/' > taxids_sighits.txt && rm sighits.txt
 	awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}'  $tool_dir/rankedlineage_edited.dmp taxids_sighits.txt | \
-	awk '{gsub(/ /,"_"); print }' > rankedlineage_subhits.txt 
-
+	awk '{gsub(/ /,"_"); print }' > rankedlineage_subhits_temp.txt
+	awk -F '\t' '{print $5"\t"$6"\t"$7"\t"$8"\t"$9"\t"$10}' rankedlineage_subhits_temp.txt > rankedlineage_subhits.txt && rm rankedlineage_subhits_temp.txt 
 	rm taxids_sighits.txt
+
 	cd $proj_dir/metagenome/sighits/sighits_family
 	echo -e "${YELLOW}- quantifying the family-level taxonomy"
-	awk '{print $1}' rankedlineage_subhits.txt > ../../results/family_level/family_taxa_mean.txt
-	awk '{print $1}' rankedlineage_subhits.txt > ../../results/family_level/family_taxa_unique_sequences.txt
-	awk '{print $1}' rankedlineage_subhits.txt > ../../results/family_level/family_taxa_quantification_accuracy.txt 
-	for i in $(ls *_sighits.txt); do
-		cut -f 1,11 $i | awk '{print $2,"\t",$1}' | datamash --header-in --sort --group 1 mean 2 sstdev 2 count 2 | \
-		awk '{ print $1,"\t",$2,"\t",$4,"\t",((($3/sqrt($4))/$2)*100) }' > stats1.txt
-		echo $'tax_id\tmean\tuniq_reads\tstderr' | cat - stats1.txt > stats2.txt
+	awk '{print $1}' rankedlineage_subhits.txt | sort -u > family_taxa_mean_temp1.txt
+	echo -e 'family' | cat - family_taxa_mean_temp1.txt > family_taxa_mean_temp.txt && rm family_taxa_mean_temp1.txt
+	awk '{print $1}' rankedlineage_subhits.txt | sort -u > family_taxa_unique_sequences_temp1.txt
+	echo -e 'family' | cat - family_taxa_unique_sequences_temp1.txt > family_taxa_unique_sequences_temp.txt && rm family_taxa_unique_sequences_temp1.txt
+	awk '{print $1}' rankedlineage_subhits.txt | sort -u > family_taxa_quantification_accuracy_temp1.txt
+	echo -e 'family' | cat - family_taxa_quantification_accuracy_temp1.txt > family_taxa_quantification_accuracy_temp.txt && rm family_taxa_quantification_accuracy_temp1.txt 
+	min_uniq=4
+	col_num=15
+	for i in $(ls *_sighits.txt);do
+		Rscript $tool_dir/Rscripts/stats_summary.R $i $min_uniq $col_num
+		echo $'family\tmean\tuniq_reads\tstderr' | cat - stats1.txt > stats2.txt 
 		id=${i%_sighits*}_mean && awk -v id=$id '{gsub(/mean/,id); print }' stats2.txt | awk '{print $1,"\t",$2}' > holdmean.txt
-		awk 'FNR==NR{a[$1]=$2;next}{if(a[$1]==""){a[$1]=0}; print $0, a[$1]}'  holdmean.txt ../../results/family_level/family_taxa_mean.txt > holdmean2.txt && cat holdmean2.txt > ../../results/family_level/family_taxa_mean.txt
+		awk 'FNR==NR{a[$1]=$2;next}{if(a[$1]==""){a[$1]=0}; print $0, a[$1]}'  holdmean.txt family_taxa_mean_temp.txt > holdmean2.txt && cat holdmean2.txt > family_taxa_mean_temp.txt
 		id=${i%_sighits*}_uniq_reads && awk -v id=$id '{gsub(/uniq_reads/,id); print }' stats2.txt | awk '{print $1,"\t",$3}' > holduniq_reads.txt
-		awk 'FNR==NR{a[$1]=$2;next}{if(a[$1]==""){a[$1]=0}; print $0, a[$1]}'  holduniq_reads.txt ../../results/family_level/family_taxa_unique_sequences.txt > holduniq_reads2.txt && cat holduniq_reads2.txt > ../../results/family_level/family_taxa_unique_sequences.txt
+		awk 'FNR==NR{a[$1]=$2;next}{if(a[$1]==""){a[$1]=0}; print $0, a[$1]}'  holduniq_reads.txt family_taxa_unique_sequences_temp.txt > holduniq_reads2.txt && cat holduniq_reads2.txt > family_taxa_unique_sequences_temp.txt
 		id=${i%_sighits*}_stderr && awk -v id=$id '{gsub(/stderr/,id); print }' stats2.txt | awk '{print $1,"\t",$4}' > holdstderr.txt
-		awk 'FNR==NR{a[$1]=$2;next}{if(a[$1]==""){a[$1]=0}; print $0, a[$1]}'  holdstderr.txt ../../results/family_level/family_taxa_quantification_accuracy.txt > holdstderr2.txt && cat holdstderr2.txt > ../../results/family_level/family_taxa_quantification_accuracy.txt
+		awk 'FNR==NR{a[$1]=$2;next}{if(a[$1]==""){a[$1]=0}; print $0, a[$1]}'  holdstderr.txt family_taxa_quantification_accuracy_temp.txt > holdstderr2.txt && cat holdstderr2.txt > family_taxa_quantification_accuracy_temp.txt
 		awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print $1,"\t",$2,"\t",$3,"\t",$4,"\t", a[$1]}'  rankedlineage_subhits.txt stats2.txt > stats3.txt
-		awk '{print $1,$2,$3,$4,$6,$7,$8,$9,$10,$11,$12,$13,$14 }' stats3.txt | awk '{gsub(/ /,"\t"); print }' > ${i%_sighits*}_taxastats.txt
+		awk '{print $1,$2,$3,$4,$6,$7,$8,$9 }' stats3.txt | awk '{gsub(/ /,"\t"); print }' > ${i%_sighits*}_taxastats.txt
 		rm *stats1* *stats2* *stats3* *hold*
 	done
+	awk 'NR==1; NR > 1 {s=0; for (i=2;i<=NF;i++) s+=$i; if (s!=0)print}' family_taxa_mean_temp.txt > family_taxa_mean_temp2.txt && rm family_taxa_mean_temp.txt
+	awk '{gsub(/ /,"\t"); print}' family_taxa_mean_temp2.txt > ../../results/family_level/family_taxa_mean.txt && rm family_taxa_mean_temp2.txt
+	awk 'NR==1; NR > 1 {s=0; for (i=2;i<=NF;i++) s+=$i; if (s!=0)print}' family_taxa_unique_sequences_temp.txt > family_taxa_unique_sequences_temp2.txt && rm family_taxa_unique_sequences_temp.txt
+	awk '{gsub(/ /,"\t"); print}' family_taxa_unique_sequences_temp2.txt > ../../results/family_level/family_taxa_unique_sequences.txt && rm family_taxa_unique_sequences_temp2.txt
+	awk '{gsub(/ /,"\t"); print}' family_taxa_quantification_accuracy_temp.txt > family_taxa_quantification_accuracy_temp2.txt && rm family_taxa_quantification_accuracy_temp.txt
+	awk -F '\t' 'NR==FNR{c[$1]++;next};c[$1] > 0' family_taxa_quantification_accuracy_temp2.txt ../../results/family_level/family_taxa_mean.txt > ../../results/family_level/family_taxa_quantification_accuracy.txt && rm family_taxa_quantification_accuracy_temp2.txt
+
+
 	cd $proj_dir/metagenome/results/family_level
 	i="_mean$"
 	awk -vp="$i" 'NR==1{for(i=1; i<=NF; i++) if ($i~p) {a[i]++;} } { for (i in a) printf "%s\t", $i; printf "\n"}' family_taxa_mean.txt > temp_mean.txt
