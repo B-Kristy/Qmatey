@@ -3,15 +3,17 @@ library(data.table)
 args <- commandArgs(TRUE)
 sighits <- args[1]
 minUniqRead <- args[2]
-
+print(args[1])
+print(args[2])
+print(args[3])
 if (args[3] == "strain"){
-  fileNames <- c(sighits) 
+  fileNames <- c(sighits)
   for (fileName in fileNames) {
     stats1 <- read.table(file=fileName, header=T, sep="\t", fill= T, quote="", check.names = T)
     stats1 <- subset(stats1, select=c(1,11))
     groups <- unique(stats1[,2])
     stats <- NULL
-    
+
     for (i in 1:length(groups)) {
       outlier <- subset(stats1, stats1[,c(2)] == groups[i])
       OutVals <- boxplot(outlier, plot=FALSE)$out
@@ -33,20 +35,22 @@ if (args[3] == "strain"){
     stats1$mean[stats1$uniq_reads < minUniqRead] <- NA
     stats1$uniq_reads[stats1$uniq_reads < minUniqRead] <- NA
     stats1$stderr[stats1$uniq_reads < minUniqRead] <- NA
+    
   }
-  
   write.table(stats1,"stats1.txt", sep="\t",row.names=FALSE, col.names=FALSE, quote = F)
+
+
   #cor(stats1, method="pearson", use="complete.obs")
 }
 
 if (args[3] == "species"){
-  fileNames <- c(sighits) 
+  fileNames <- c(sighits)
   for (fileName in fileNames) {
     stats1 <- read.table(file=fileName, header=T, sep="\t", fill= T, quote="", check.names = T)
     stats1 <- subset(stats1, select=c(1,13))
     groups <- unique(stats1[,2])
     stats <- NULL
-    
+
     for (i in 1:length(groups)) {
       outlier <- subset(stats1, stats1[,c(2)] == groups[i])
       OutVals <- boxplot(outlier, plot=FALSE)$out
@@ -69,19 +73,19 @@ if (args[3] == "species"){
     stats1$uniq_reads[stats1$uniq_reads < minUniqRead] <- NA
     stats1$stderr[stats1$uniq_reads < minUniqRead] <- NA
   }
-  
+
   write.table(stats1,"stats1.txt", sep="\t",row.names=FALSE, col.names=FALSE, quote = F)
   #cor(stats1, method="pearson", use="complete.obs")
 }
 
 if (args[3] == "genus"){
-  fileNames <- c(sighits) 
+  fileNames <- c(sighits)
   for (fileName in fileNames) {
     stats1 <- read.table(file=fileName, header=T, sep="\t", fill= T, quote="", check.names = T)
     stats1 <- subset(stats1, select=c(1,14))
     groups <- unique(stats1[,2])
     stats <- NULL
-    
+
     for (i in 1:length(groups)) {
       outlier <- subset(stats1, stats1[,c(2)] == groups[i])
       OutVals <- boxplot(outlier, plot=FALSE)$out
@@ -104,13 +108,13 @@ if (args[3] == "genus"){
     stats1$uniq_reads[stats1$uniq_reads < minUniqRead] <- NA
     stats1$stderr[stats1$uniq_reads < minUniqRead] <- NA
   }
-  
+
   write.table(stats1,"stats1.txt", sep="\t",row.names=FALSE, col.names=FALSE, quote = F)
   #cor(stats1, method="pearson", use="complete.obs")
 }
 
 if (args[3] == "family"){
-fileNames <- c(sighits) 
+fileNames <- c(sighits)
 for (fileName in fileNames) {
 stats1 <- read.table(file=fileName, header=T, sep="\t", fill= T, quote="", check.names = T)
 stats1 <- subset(stats1, select=c(1,15))
@@ -145,13 +149,13 @@ write.table(stats1,"stats1.txt", sep="\t",row.names=FALSE, col.names=FALSE, quot
 }
 
 if (args[3] == "order"){
-  fileNames <- c(sighits) 
+  fileNames <- c(sighits)
   for (fileName in fileNames) {
     stats1 <- read.table(file=fileName, header=T, sep="\t", fill= T, quote="", check.names = T)
     stats1 <- subset(stats1, select=c(1,16))
     groups <- unique(stats1[,2])
     stats <- NULL
-    
+
     for (i in 1:length(groups)) {
       outlier <- subset(stats1, stats1[,c(2)] == groups[i])
       OutVals <- boxplot(outlier, plot=FALSE)$out
@@ -174,19 +178,19 @@ if (args[3] == "order"){
     stats1$uniq_reads[stats1$uniq_reads < minUniqRead] <- NA
     stats1$stderr[stats1$uniq_reads < minUniqRead] <- NA
   }
-  
+
   write.table(stats1,"stats1.txt", sep="\t",row.names=FALSE, col.names=FALSE, quote = F)
   #cor(stats1, method="pearson", use="complete.obs")
 }
 
 if (args[3] == "class"){
-  fileNames <- c(sighits) 
+  fileNames <- c(sighits)
   for (fileName in fileNames) {
     stats1 <- read.table(file=fileName, header=T, sep="\t", fill= T, quote="", check.names = T)
     stats1 <- subset(stats1, select=c(1,17))
     groups <- unique(stats1[,2])
     stats <- NULL
-    
+
     for (i in 1:length(groups)) {
       outlier <- subset(stats1, stats1[,c(2)] == groups[i])
       OutVals <- boxplot(outlier, plot=FALSE)$out
@@ -209,19 +213,19 @@ if (args[3] == "class"){
     stats1$uniq_reads[stats1$uniq_reads < minUniqRead] <- NA
     stats1$stderr[stats1$uniq_reads < minUniqRead] <- NA
   }
-  
+
   write.table(stats1,"stats1.txt", sep="\t",row.names=FALSE, col.names=FALSE, quote = F)
   #cor(stats1, method="pearson", use="complete.obs")
 }
 
 if (args[3] == "phylum"){
-  fileNames <- c(sighits) 
+  fileNames <- c(sighits)
   for (fileName in fileNames) {
     stats1 <- read.table(file=fileName, header=T, sep="\t", fill= T, quote="", check.names = T)
     stats1 <- subset(stats1, select=c(1,18))
     groups <- unique(stats1[,2])
     stats <- NULL
-    
+
     for (i in 1:length(groups)) {
       outlier <- subset(stats1, stats1[,c(2)] == groups[i])
       OutVals <- boxplot(outlier, plot=FALSE)$out
@@ -244,7 +248,7 @@ if (args[3] == "phylum"){
     stats1$uniq_reads[stats1$uniq_reads < minUniqRead] <- NA
     stats1$stderr[stats1$uniq_reads < minUniqRead] <- NA
   }
-  
+
   write.table(stats1,"stats1.txt", sep="\t",row.names=FALSE, col.names=FALSE, quote = F)
   #cor(stats1, method="pearson", use="complete.obs")
 }
