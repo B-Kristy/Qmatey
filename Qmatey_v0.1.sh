@@ -279,6 +279,7 @@ cat - $tool_dir/rankedlineage_tabdelimited.dmp > $tool_dir/rankedlineage_edited.
 rm $tool_dir/rankedlineage_tabdelimited.dmp
 
 ##################################################################################################################
+<<<<<<< HEAD
 strain_filter() {
 cd $proj_dir/metagenome/sighits
 mkdir sighits_strain
@@ -369,6 +370,92 @@ Rscript $tool_dir/Rscripts/strain_level_boxplots.R $strain_level_mean $strain_le
 mkdir boxplots
 mv *_files $proj_dir/metagenome/results/strain_level/boxplots
 mv *.html $proj_dir/metagenome/results/strain_level/boxplots
+=======
+main() {
+	cd $proj_dir/metagenome/sighits
+	mkdir sighits_strain
+	cd $proj_dir/metagenome/results
+	mkdir strain_level
+	cp seqcov.txt ./strain_level
+	echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Preforming Strain-Level Classification \n\e[97m########################################################\n"
+	cd $proj_dir/metagenome/alignment
+	echo -e "${YELLOW}- preforming exact-matching algorithm"
+	for i in $(ls *_haplotig_nd.megablast);do
+		awk '$6>=100' $i | awk '$7>=100' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_strain/${i%_haplotig*}_filter.txt
+		awk 'NR==FNR {h[$1] = $2; next} {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,h[$1]}' ../haplotig/${i%_haplotig*}_normalized.txt ../sighits/sighits_strain/${i%_haplotig*}_filter.txt | 
+		awk '{print $12,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11}' | awk 'gsub(" ","\t",$0)' > ../sighits/sighits_strain/${i%_haplotig*}_sighits.txt
+	done
+	rm ../sighits/sighits_strain/*_filter.txt 
+	cd $proj_dir/metagenome/sighits/sighits_strain
+	for i in $(ls *_sighits.txt);do
+		awk '{a[$2]++;b[$2]=$0}END{for(x in a)if(a[x]==1)print b[x]}' $i > ${i%.txt}_nr_temp.txt
+		echo $'abundance\tqseqid\tsseqid\tlength\tmismatch\tevalue\tpident\tqcovs\tqseq\tsseq\tstaxids\tstitle' | \
+		cat - ${i%.txt}_nr_temp.txt > ${i%.txt}_nr.txt
+	done
+	rm *_sighits.txt *_nr_temp.txt
+	echo -e "${YELLOW}- compiling taxonomic information"
+	cd $proj_dir/metagenome/sighits/sighits_strain
+	find . -type f -name '*_sighits_nr.txt' -exec cat {} + > sighits.txt
+	awk '{print $11}' sighits.txt | awk '{gsub(";","\n"); print}' | sort -u -n | sed -e '1s/staxids/tax_id/' > taxids_sighits.txt && rm sighits.txt
+	awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}'  $tool_dir/rankedlineage_edited.dmp taxids_sighits.txt | \
+	awk '{gsub(/ /,"_"); print }' > rankedlineage_subhits.txt 
+	rm taxids_sighits.txt
+	cd $proj_dir/metagenome/sighits/sighits_strain/
+	awk '{print $1}' rankedlineage_subhits.txt > strain_taxa_mean_temp.txt
+	awk '{print $1}' rankedlineage_subhits.txt > strain_taxa_unique_sequences_temp.txt
+	awk '{print $1}' rankedlineage_subhits.txt > strain_taxa_quantification_accuracy_temp.txt
+	echo -e "${YELLOW}- quantifying the strain-level taxonomy" 
+	strain_level=strain
+	for i in $(ls *_sighits_nr.txt);do
+		Rscript $tool_dir/Rscripts/stats_summary.R $i $min_uniq $strain_level
+		echo $'tax_id\tmean\tuniq_reads\tstderr' | cat - stats1.txt > stats2.txt 
+		id=${i%_sighits*}_mean && awk -v id=$id '{gsub(/mean/,id); print }' stats2.txt | awk '{print $1,"\t",$2}' > holdmean.txt
+		awk 'FNR==NR{a[$1]=$2;next}{if(a[$1]==""){a[$1]=0}; print $0, a[$1]}'  holdmean.txt strain_taxa_mean_temp.txt > holdmean2.txt && cat holdmean2.txt > strain_taxa_mean_temp.txt
+		id=${i%_sighits*}_uniq_reads && awk -v id=$id '{gsub(/uniq_reads/,id); print }' stats2.txt | awk '{print $1,"\t",$3}' > holduniq_reads.txt
+		awk 'FNR==NR{a[$1]=$2;next}{if(a[$1]==""){a[$1]=0}; print $0, a[$1]}'  holduniq_reads.txt strain_taxa_unique_sequences_temp.txt > holduniq_reads2.txt && cat holduniq_reads2.txt > strain_taxa_unique_sequences_temp.txt
+		id=${i%_sighits*}_stderr && awk -v id=$id '{gsub(/stderr/,id); print }' stats2.txt | awk '{print $1,"\t",$4}' > holdstderr.txt
+		awk 'FNR==NR{a[$1]=$2;next}{if(a[$1]==""){a[$1]=0}; print $0, a[$1]}'  holdstderr.txt strain_taxa_quantification_accuracy_temp.txt > holdstderr2.txt && cat holdstderr2.txt > strain_taxa_quantification_accuracy_temp.txt
+		awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print $1,"\t",$2,"\t",$3,"\t",$4,"\t", a[$1]}'  rankedlineage_subhits.txt stats2.txt > stats3.txt
+		awk '{print $1,$2,$3,$4,$6,$7,$8,$9,$10,$11,$12,$13,$14 }' stats3.txt | awk '{gsub(/ /,"\t"); print }' > ${i%_sighits*}_taxastats.txt
+		rm *stats1* *stats2* *stats3* *hold*
+	done
+		
+	awk 'NR==1; NR > 1 {s=0; for (i=2;i<=NF;i++) s+=$i; if (s!=0)print}' strain_taxa_mean_temp.txt > strain_taxa_mean_temp2.txt && rm strain_taxa_mean_temp.txt
+	awk '{gsub(/ /,"\t"); print}' strain_taxa_mean_temp2.txt > ../../results/strain_level/strain_taxa_mean.txt && rm strain_taxa_mean_temp2.txt
+	awk 'NR==1; NR > 1 {s=0; for (i=2;i<=NF;i++) s+=$i; if (s!=0)print}' strain_taxa_unique_sequences_temp.txt > strain_taxa_unique_sequences_temp2.txt && rm strain_taxa_unique_sequences_temp.txt
+	awk '{gsub(/ /,"\t"); print}' strain_taxa_unique_sequences_temp2.txt > ../../results/strain_level/strain_taxa_unique_sequences.txt && rm strain_taxa_unique_sequences_temp2.txt
+	awk '{gsub(/ /,"\t"); print}' strain_taxa_quantification_accuracy_temp.txt > strain_taxa_quantification_accuracy_temp2.txt && rm strain_taxa_quantification_accuracy_temp.txt
+	awk -F '\t' 'NR==FNR{c[$1]++;next};c[$1] > 0' ../../results/strain_level/strain_taxa_mean.txt strain_taxa_quantification_accuracy_temp2.txt > ../../results/strain_level/strain_taxa_quantification_accuracy.txt && rm strain_taxa_quantification_accuracy_temp2.txt
+	rm *_temp.txt
+	cd $proj_dir/metagenome/results/strain_level
+	i="_mean$"
+	awk -vp="$i" 'NR==1{for(i=1; i<=NF; i++) if ($i~p) {a[i]++;} } { for (i in a) printf "%s\t", $i; printf "\n"}' strain_taxa_mean.txt > temp_mean.txt
+	i="uniq_reads$"
+	awk -vp="$i" 'NR==1{for(i=1; i<=NF; i++) if ($i~p) {a[i]++;} } { for (i in a) printf "%s\t", $i; printf "\n"}' strain_taxa_unique_sequences.txt > temp_uniq.txt
+	paste temp_mean.txt temp_uniq.txt | awk '/^[0-9]/ {for(i=1; i<=NF/2; i++) {s=s OFS $i*$(NF/2+i); }sub(/^ /,x,s);$0=s; s=""} !/[0-9]/{$0=$1;}1' > temp_uniq_mean.txt
+	tail -n +2 temp_uniq_mean.txt > temp_uniq_mean_2.txt
+	awk '{for (i=1; i<=NF; i++) sum[i]+=$i;}; END{for (i in sum) print sum[i];}' temp_uniq_mean_2.txt > temp_uniq_mean_3.txt
+	awk '{sum+=$1}END{print sum}' temp_uniq_mean_3.txt > mean_uniq.txt
+	paste mean_uniq.txt seqcov.txt | awk '{print(($1/$2)* 100)}' > strain_percent_coverage.txt
+	rm *temp* *mean_uniq*
+	cd $proj_dir/metagenome/results/strain_level
+	for i in {mean,unique_sequences,quantification_accuracy}; do
+		awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print $0, a[$1]}'  ../../sighits/sighits_strain/rankedlineage_subhits.txt strain_taxa_${i}.txt | \
+		awk 'NR==1{for(i=1;i<=NF;i++)b[$i]++&&a[i]}{for(i in a)$i="";gsub(" +"," ")}1' | awk '{gsub(/ /,"\t"); print }' > strain_taxainfo_${i}.txt
+	done
+	rm *_taxa_*
+	echo -e "${YELLOW}- creating strain-level visualizations"
+	cd $proj_dir/metagenome/results/strain_level
+	strain_level_mean=strain_taxainfo_mean.txt
+	strain_level_uniq=strain_taxainfo_unique_sequences.txt
+	strain_level_stderr=strain_taxainfo_quantification_accuracy.txt
+	percent_thresh=5
+	Rscript $tool_dir/Rscripts/strain_level_corr.R $strain_level_mean $percent_thresh &>/dev/null
+	Rscript $tool_dir/Rscripts/strain_level_boxplots.R $strain_level_mean $strain_level_uniq $strain_level_stderr $percent_thresh &>/dev/null
+	mkdir boxplots
+	mv *_files $proj_dir/metagenome/results/strain_level/boxplots
+	mv *.html $proj_dir/metagenome/results/strain_level/boxplots
+>>>>>>> 5bf222ed7b5e897ab327a62a30ddf430f6006c82
 }
 if [ "$strain_level" == "TRUE" ]; then
 	time strain_stats 2>> $proj_dir/log.out
@@ -579,7 +666,7 @@ awk '{gsub(/ /,"\t"); print}' species_taxa_mean_temp2.txt > ../../results/specie
 awk 'NR==1; NR > 1 {s=0; for (i=2;i<=NF;i++) s+=$i; if (s!=0)print}' species_taxa_unique_sequences_temp.txt > species_taxa_unique_sequences_temp2.txt && rm species_taxa_unique_sequences_temp.txt
 awk '{gsub(/ /,"\t"); print}' species_taxa_unique_sequences_temp2.txt > ../../results/species_level/species_taxa_unique_sequences.txt && rm species_taxa_unique_sequences_temp2.txt
 awk '{gsub(/ /,"\t"); print}' species_taxa_quantification_accuracy_temp.txt > species_taxa_quantification_accuracy_temp2.txt && rm species_taxa_quantification_accuracy_temp.txt
-awk -F '\t' 'NR==FNR{c[$1]++;next};c[$1] > 0' species_taxa_quantification_accuracy_temp2.txt ../../results/species_level/species_taxa_mean.txt > ../../results/species_level/species_taxa_quantification_accuracy.txt && rm species_taxa_quantification_accuracy_temp2.txt
+awk -F '\t' 'NR==FNR{c[$1]++;next};c[$1] > 0' ../../results/species_level/species_taxa_mean.txt species_taxa_quantification_accuracy_temp2.txt > ../../results/species_level/species_taxa_quantification_accuracy.txt && rm species_taxa_quantification_accuracy_temp2.txt
 
 cd $proj_dir/metagenome/results/species_level/
 i="_mean$"
@@ -688,7 +775,7 @@ for i in $(ls *_genus_inter.txt);do
 	awk -F '\t' '{print $2, $1, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21}' OFS='\t' $i > ${i%_genus_inter*}_genus_inter2.txt
 	) &
 	if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
-		wait
+	wait
 	fi
 done
 for i in $(ls *_genus_inter2.txt);do
@@ -696,7 +783,7 @@ for i in $(ls *_genus_inter2.txt);do
 	awk -F '\t' '{dups[$1]++} END {for (num in dups) {print num}}' $i | sort -k1,1  > ${i%_genus_inter2*}_duplicate_count.txt 
 	) &
 	if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
-		wait
+	wait
 	fi
 done
 for i in $(ls *_duplicate_count.txt);do
@@ -755,7 +842,7 @@ done
 for i in $(ls *_unique_reads.txt);do
 	paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12}' OFS='\t' $i ) <(awk -F '\t' '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' ${i%*_genus_unique_reads*}_species_taxa.txt) > ${i%_uniq*}_genus_unique_uncultured.txt
 done
-rm *_species_taxid.txt && rm *_uniq_inter.txt && rm *_uniq.txt && rm *_species_column.txt && rm *_species_taxa.txt
+rm *_species_taxid.txt && rm *_uniq_inter.txt && rm *_species_column.txt && rm *_species_taxa.txt
 for i in $(ls *_genus_unique_uncultured.txt);do
 	awk -F '\t' '!/Uncultured/' $i > ${i%*_genus_unique_uncultured*}_genus_unique_sequences.txt
 done
@@ -765,18 +852,17 @@ for i in $(ls *_genus_OTU.txt);do
 done 
 echo -e "${YELLOW}- compiling taxonomic information"
 for i in $(ls *_complete_genus_reads.txt);do
-	awk '{ for(i=1;i<=NF;i++){if(i==NF){printf("%s\n",$NF);}else {printf("%s\t",$i)}}}' $i > ${i%_complete_genus_reads*}_sighits_temp.txt
+	awk -F '\t' '{ for(i=1;i<=NF;i++){if(i==NF){printf("%s\n",$NF);}else {printf("%s\t",$i)}}}' $i > ${i%_complete_genus_reads*}_sighits_temp.txt
 	echo $'abundance\tqseqid\tsseqid\tlength\tmismatch\tevalue\tpident\tqcovs\tqseq\tsseq\tstaxids\tstitle\tspecies\tgenus\tfamily\torder\tclass\tphylum\tkingdom\tdomain' | \
 	cat - ${i%_complete_genus_reads*}_sighits_temp.txt > ${i%_complete_genus_reads*}_sighits.txt
 done
 rm *_complete_genus_reads.txt && rm *_sighits_temp.txt && rm *_genus_OTU.txt && rm *_unique_reads.txt && rm *_genus_genus_unique_sequences.txt
 cd $proj_dir/metagenome/sighits/sighits_genus
 find . -type f -name '*_sighits.txt' -exec cat {} + > sighits.txt
-awk '{print $11}' sighits.txt | awk '{gsub(";","\n"); print}' | sort -u | sed -e '1s/staxids/tax_id/' > taxids_sighits.txt && rm sighits.txt
-awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}'  $tool_dir/rankedlineage_edited.dmp taxids_sighits.txt | \
-awk '{gsub(/ /,"_"); print }' > rankedlineage_subhits_temp.txt
-awk -F '\t' '{print $4"\t"$5"\t"$6"\t"$7"\t"$8"\t"$9"\t"$10}' rankedlineage_subhits_temp.txt > rankedlineage_subhits.txt && rm rankedlineage_subhits_temp.txt 
-rm taxids_sighits.txt
+awk -F '\t' '{print $14"\t"$15"\t"$16"\t"$17"\t"$18"\t"$19"\t"$20}' sighits.txt > rankedlineage_subhits_temp.txt && rm sighits.txt
+awk -F '\t' '!/genus/' rankedlineage_subhits_temp.txt > rankedlineage_subhits_temp2.txt && rankedlineage_subhits_temp.txt
+echo $'genus\tfamily\torder\tclass\tphylum\tkingdom\tdomain' | cat - rankedlineage_subhits_temp2.txt > rankedlineage_subhits.txt && rankedlineage_subhits_temp2.txt
+
 cd $proj_dir/metagenome/sighits/sighits_genus
 echo -e "${YELLOW}- quantifying the genus-level taxonomy"
 awk '{print $1}' rankedlineage_subhits.txt | sort -u > genus_taxa_mean_temp1.txt
@@ -809,7 +895,8 @@ awk '{gsub(/ /,"\t"); print}' genus_taxa_mean_temp2.txt > ../../results/genus_le
 awk 'NR==1; NR > 1 {s=0; for (i=2;i<=NF;i++) s+=$i; if (s!=0)print}' genus_taxa_unique_sequences_temp.txt > genus_taxa_unique_sequences_temp2.txt && rm genus_taxa_unique_sequences_temp.txt
 awk '{gsub(/ /,"\t"); print}' genus_taxa_unique_sequences_temp2.txt > ../../results/genus_level/genus_taxa_unique_sequences.txt && rm genus_taxa_unique_sequences_temp2.txt
 awk '{gsub(/ /,"\t"); print}' genus_taxa_quantification_accuracy_temp.txt > genus_taxa_quantification_accuracy_temp2.txt && rm genus_taxa_quantification_accuracy_temp.txt
-awk -F '\t' 'NR==FNR{c[$1]++;next};c[$1] > 0' genus_taxa_quantification_accuracy_temp2.txt ../../results/genus_level/genus_taxa_mean.txt > ../../results/genus_level/genus_taxa_quantification_accuracy.txt && rm genus_taxa_quantification_accuracy_temp2.txt
+awk -F '\t' 'NR==FNR{c[$1]++;next};c[$1] > 0' ../../results/genus_level/genus_taxa_mean.txt genus_taxa_quantification_accuracy_temp2.txt > genus_taxa_quantification_accuracy_temp3.txt && rm genus_taxa_quantification_accuracy_temp2.txt
+sed '2,${/genus/d;}' genus_taxa_quantification_accuracy_temp3.txt > ../../results/genus_level/genus_taxa_quantification_accuracy.txt && rm genus_taxa_quantification_accuracy_temp3.txt
 
 cd $proj_dir/metagenome/results/genus_level
 i="_mean$"
@@ -1017,11 +1104,10 @@ done
 cd $proj_dir/metagenome/sighits/sighits_family
 echo -e "${YELLOW}- compiling taxonomic information"
 find . -type f -name '*_sighits.txt' -exec cat {} + > sighits.txt
-awk '{print $11}' sighits.txt | awk '{gsub(";","\n"); print}' | sort -u | sed -e '1s/staxids/tax_id/' > taxids_sighits.txt && rm sighits.txt
-awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}'  $tool_dir/rankedlineage_edited.dmp taxids_sighits.txt | \
-awk '{gsub(/ /,"_"); print }' > rankedlineage_subhits_temp.txt
-awk -F '\t' '{print $5"\t"$6"\t"$7"\t"$8"\t"$9"\t"$10}' rankedlineage_subhits_temp.txt > rankedlineage_subhits.txt && rm rankedlineage_subhits_temp.txt 
-rm taxids_sighits.txt
+awk -F '\t' '{print $15"\t"$16"\t"$17"\t"$18"\t"$19"\t"$20}' sighits.txt > rankedlineage_subhits_temp.txt && rm sighits.txt
+awk -F '\t' '!/family/' rankedlineage_subhits_temp.txt > rankedlineage_subhits_temp2.txt && rankedlineage_subhits_temp.txt
+echo $'family\torder\tclass\tphylum\tkingdom\tdomain' | cat - rankedlineage_subhits_temp2.txt > rankedlineage_subhits.txt && rankedlineage_subhits_temp2.txt
+
 
 cd $proj_dir/metagenome/sighits/sighits_family
 echo -e "${YELLOW}- quantifying the family-level taxonomy"
@@ -1056,8 +1142,8 @@ awk '{gsub(/ /,"\t"); print}' family_taxa_mean_temp2.txt > ../../results/family_
 awk 'NR==1; NR > 1 {s=0; for (i=2;i<=NF;i++) s+=$i; if (s!=0)print}' family_taxa_unique_sequences_temp.txt > family_taxa_unique_sequences_temp2.txt && rm family_taxa_unique_sequences_temp.txt
 awk '{gsub(/ /,"\t"); print}' family_taxa_unique_sequences_temp2.txt > ../../results/family_level/family_taxa_unique_sequences.txt && rm family_taxa_unique_sequences_temp2.txt
 awk '{gsub(/ /,"\t"); print}' family_taxa_quantification_accuracy_temp.txt > family_taxa_quantification_accuracy_temp2.txt && rm family_taxa_quantification_accuracy_temp.txt
-awk -F '\t' 'NR==FNR{c[$1]++;next};c[$1] > 0' family_taxa_quantification_accuracy_temp2.txt ../../results/family_level/family_taxa_mean.txt > ../../results/family_level/family_taxa_quantification_accuracy.txt && rm family_taxa_quantification_accuracy_temp2.txt
-
+awk -F '\t' 'NR==FNR{c[$1]++;next};c[$1] > 0' ../../results/family_level/family_taxa_mean.txt family_taxa_quantification_accuracy_temp2.txt > family_taxa_quantification_accuracy_temp3.txt && rm family_taxa_quantification_accuracy_temp2.txt
+sed '2,${/family/d;}' family_taxa_quantification_accuracy_temp3.txt > ../../results/family_level/family_taxa_quantification_accuracy.txt && rm family_taxa_quantification_accuracy_temp3.txt
 
 cd $proj_dir/metagenome/results/family_level
 i="_mean$"
@@ -1156,7 +1242,7 @@ rm *_species_taxid.txt && rm *_dup_inter.txt && rm *_dup.txt && rm *_species_col
 for i in $(ls *_order_duplicates_uncultured.txt);do
 	awk -F '\t' '!/Uncultured/' $i > ${i%*_order_duplicates_uncultured*}_order_duplicates.txt
 done
-rm *_order_duplicates_uncultred.txt
+rm *_order_duplicates_uncultured.txt
 for i in $(ls *_order_duplicates.txt);do
 	(
 	awk -F '\t' '{print $1, $2"~"$17, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $16, $17, $18, $19, $20, $21}' OFS='\t' $i > ${i%_order_duplicates*}_order_inter.txt
@@ -1256,7 +1342,7 @@ for i in $(ls *_order_OTU.txt);do
 done 
 wait
 for i in $(ls *_complete_order_reads.txt);do
-	awk '{ for(i=1;i<=NF;i++){if(i==NF){printf("%s\n",$NF);}else {printf("%s\t",$i)}}}' $i > ${i%_complete_order_reads*}_sighits_temp.txt
+	awk -F '\t' '{ for(i=1;i<=NF;i++){if(i==NF){printf("%s\n",$NF);}else {printf("%s\t",$i)}}}' $i > ${i%_complete_order_reads*}_sighits_temp.txt
 	echo $'abundance\tqseqid\tsseqid\tlength\tmismatch\tevalue\tpident\tqcovs\tqseq\tsseq\tstaxids\tstitle\tspecies\tgenus\tfamily\torder\tclass\tphylum\tkingdom\tdomain' | \
 	cat - ${i%_complete_order_reads*}_sighits_temp.txt > ${i%_complete_order_reads*}_sighits.txt
 done
@@ -1264,11 +1350,10 @@ rm *_complete_order_reads.txt && rm *_sighits_temp.txt && rm *_order_OTU.txt && 
 cd $proj_dir/metagenome/sighits/sighits_order
 echo -e "${YELLOW}- compiling taxonomic information"
 find . -type f -name '*_sighits.txt' -exec cat {} + > sighits.txt
-awk '{print $11}' sighits.txt | awk '{gsub(";","\n"); print}' | sort -u | sed -e '1s/staxids/tax_id/' > taxids_sighits.txt && rm sighits.txt
-awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}'  $tool_dir/rankedlineage_edited.dmp taxids_sighits.txt | \
-awk '{gsub(/ /,"_"); print }' > rankedlineage_subhits_temp.txt
-awk -F '\t' '{print $6"\t"$7"\t"$8"\t"$9"\t"$10}' rankedlineage_subhits_temp.txt > rankedlineage_subhits.txt && rm rankedlineage_subhits_temp.txt 
-rm taxids_sighits.txt
+awk -F '\t' '{print $16"\t"$17"\t"$18"\t"$19"\t"$20}' sighits.txt > rankedlineage_subhits_temp.txt && rm sighits.txt
+awk -F '\t' '!/order/' rankedlineage_subhits_temp.txt > rankedlineage_subhits_temp2.txt && rankedlineage_subhits_temp.txt
+echo $'order\tclass\tphylum\tkingdom\tdomain' | cat - rankedlineage_subhits_temp2.txt > rankedlineage_subhits.txt && rankedlineage_subhits_temp2.txt
+
 
 cd $proj_dir/metagenome/sighits/sighits_order
 echo -e "${YELLOW}- quantifying the order-level taxonomy"
@@ -1303,7 +1388,8 @@ awk '{gsub(/ /,"\t"); print}' order_taxa_mean_temp2.txt > ../../results/order_le
 awk 'NR==1; NR > 1 {s=0; for (i=2;i<=NF;i++) s+=$i; if (s!=0)print}' order_taxa_unique_sequences_temp.txt > order_taxa_unique_sequences_temp2.txt && rm order_taxa_unique_sequences_temp.txt
 awk '{gsub(/ /,"\t"); print}' order_taxa_unique_sequences_temp2.txt > ../../results/order_level/order_taxa_unique_sequences.txt && rm order_taxa_unique_sequences_temp2.txt
 awk '{gsub(/ /,"\t"); print}' order_taxa_quantification_accuracy_temp.txt > order_taxa_quantification_accuracy_temp2.txt && rm order_taxa_quantification_accuracy_temp.txt
-awk -F '\t' 'NR==FNR{c[$1]++;next};c[$1] > 0' order_taxa_quantification_accuracy_temp2.txt ../../results/order_level/order_taxa_mean.txt > ../../results/order_level/order_taxa_quantification_accuracy.txt && rm order_taxa_quantification_accuracy_temp2.txt
+awk -F '\t' 'NR==FNR{c[$1]++;next};c[$1] > 0' ../../results/order_level/order_taxa_mean.txt order_taxa_quantification_accuracy_temp2.txt > order_taxa_quantification_accuracy_temp3.txt && rm order_taxa_quantification_accuracy_temp2.txt
+sed '2,${/order/d;}' order_taxa_quantification_accuracy_temp3.txt > ../../results/order_level/order_taxa_quantification_accuracy.txt && rm *order_taxa_quantification_accuracy_temp3.txt
 
 cd $proj_dir/metagenome/results/order_level
 i="_mean$"
@@ -1403,7 +1489,7 @@ rm *_species_taxid.txt && rm *_dup_inter.txt && rm *_dup.txt && rm *_species_col
 for i in $(ls *_class_duplicates_uncultured.txt);do
 	awk -F '\t' '!/Uncultured/' $i > ${i%*_class_duplicates_uncultured*}_class_duplicates.txt
 done
-rm *_class_duplicates_uncultred.txt
+rm *_class_duplicates_uncultured.txt
 for i in $(ls *_class_duplicates.txt);do
 	(
 	awk -F '\t' '{print $1, $2"~"$18, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $16, $17, $18, $19, $20, $21}' OFS='\t' $i > ${i%_class_duplicates*}_class_inter.txt
@@ -1502,7 +1588,7 @@ for i in $(ls *_class_OTU.txt);do
 done 
 wait
 for i in $(ls *_complete_class_reads.txt);do
-	awk '{ for(i=1;i<=NF;i++){if(i==NF){printf("%s\n",$NF);}else {printf("%s\t",$i)}}}' $i > ${i%_complete_class_reads*}_sighits_temp.txt
+	awk -F '\t' '{ for(i=1;i<=NF;i++){if(i==NF){printf("%s\n",$NF);}else {printf("%s\t",$i)}}}' $i > ${i%_complete_class_reads*}_sighits_temp.txt
 	echo $'abundance\tqseqid\tsseqid\tlength\tmismatch\tevalue\tpident\tqcovs\tqseq\tsseq\tstaxids\tstitle\tspecies\tgenus\tfamily\torder\tclass\tphylum\tkingdom\tdomain' | \
 	cat - ${i%_complete_class_reads*}_sighits_temp.txt > ${i%_complete_class_reads*}_sighits.txt
 done
@@ -1510,11 +1596,10 @@ rm *_complete_class_reads.txt && rm *_sighits_temp.txt && rm *_class_OTU.txt && 
 cd $proj_dir/metagenome/sighits/sighits_class
 echo -e "${YELLOW}- compiling taxonomic information"
 find . -type f -name '*_sighits.txt' -exec cat {} + > sighits.txt
-awk '{print $11}' sighits.txt | awk '{gsub(";","\n"); print}' | sort -u | sed -e '1s/staxids/tax_id/' > taxids_sighits.txt && rm sighits.txt
-awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}'  $tool_dir/rankedlineage_edited.dmp taxids_sighits.txt | \
-awk '{gsub(/ /,"_"); print }' > rankedlineage_subhits_temp.txt
-awk -F '\t' '{print $7"\t"$8"\t"$9"\t"$10}' rankedlineage_subhits_temp.txt > rankedlineage_subhits.txt && rm rankedlineage_subhits_temp.txt 
-rm taxids_sighits.txt
+awk -F '\t' '{print $17"\t"$18"\t"$19"\t"$20}' sighits.txt > rankedlineage_subhits_temp.txt && rm sighits.txt
+awk -F '\t' '!/class/' rankedlineage_subhits_temp.txt > rankedlineage_subhits_temp2.txt && rankedlineage_subhits_temp.txt
+echo $'class\tphylum\tkingdom\tdomain' | cat - rankedlineage_subhits_temp2.txt > rankedlineage_subhits.txt && rankedlineage_subhits_temp2.txt
+
 
 cd $proj_dir/metagenome/sighits/sighits_class
 echo -e "${YELLOW}- quantifying the class-level taxonomy"
@@ -1548,7 +1633,8 @@ awk '{gsub(/ /,"\t"); print}' class_taxa_mean_temp2.txt > ../../results/class_le
 awk 'NR==1; NR > 1 {s=0; for (i=2;i<=NF;i++) s+=$i; if (s!=0)print}' class_taxa_unique_sequences_temp.txt > class_taxa_unique_sequences_temp2.txt && rm class_taxa_unique_sequences_temp.txt
 awk '{gsub(/ /,"\t"); print}' class_taxa_unique_sequences_temp2.txt > ../../results/class_level/class_taxa_unique_sequences.txt && rm class_taxa_unique_sequences_temp2.txt
 awk '{gsub(/ /,"\t"); print}' class_taxa_quantification_accuracy_temp.txt > class_taxa_quantification_accuracy_temp2.txt && rm class_taxa_quantification_accuracy_temp.txt
-awk -F '\t' 'NR==FNR{c[$1]++;next};c[$1] > 0' class_taxa_quantification_accuracy_temp2.txt ../../results/class_level/class_taxa_mean.txt > ../../results/class_level/class_taxa_quantification_accuracy.txt && rm class_taxa_quantification_accuracy_temp2.txt
+awk -F '\t' 'NR==FNR{c[$1]++;next};c[$1] > 0' ../../results/class_level/class_taxa_mean.txt class_taxa_quantification_accuracy_temp2.txt > class_taxa_quantification_accuracy_temp3.txt && rm class_taxa_quantification_accuracy_temp2.txt
+sed '2,${/class/d;}' class_taxa_quantification_accuracy_temp3.txt > ../../results/class_level/class_taxa_quantification_accuracy.txt && rm class_taxa_quantification_accuracy_temp3.txt
 
 cd $proj_dir/metagenome/results/class_level
 i="_mean$"
@@ -1648,7 +1734,7 @@ rm *_species_taxid.txt && rm *_dup_inter.txt && rm *_dup.txt && rm *_species_col
 for i in $(ls *_phylum_duplicates_uncultured.txt);do
 	awk -F '\t' '!/Uncultured/' $i > ${i%*_phylum_duplicates_uncultured*}_phylum_duplicates.txt
 done
-rm *_phylum_duplicates_uncultred.txt
+rm *_phylum_duplicates_uncultured.txt
 for i in $(ls *_phylum_duplicates.txt);do
 	(
 	awk -F '\t' '{print $1, $2"~"$19, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $16, $17, $18, $19, $20, $21}' OFS='\t' $i > ${i%_phylum_duplicates*}_phylum_inter.txt
@@ -1733,7 +1819,7 @@ done
 for i in $(ls *_unique_reads.txt);do
 	paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12}' OFS='\t' $i ) <(awk -F '\t' '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' ${i%*_phylum_unique_reads*}_species_taxa.txt) > ${i%_uniq*}_phylum_unique_uncultured.txt
 done
-rm *_species_taxid.txt && rm *_uniq_inter.txt && rm *_uniq.txt && rm *_species_column.txt && rm *_species_taxa.txt
+rm *_species_taxid.txt && rm *_uniq_inter.txt && rm *_species_column.txt && rm *_species_taxa.txt
 for i in $(ls *_phylum_unique_uncultured.txt);do
 	awk -F '\t' '!/Uncultured/' $i > ${i%*_phylum_unique_uncultured*}_phylum_unique_sequences.txt
 done
@@ -1748,7 +1834,7 @@ for i in $(ls *_phylum_OTU.txt);do
 done 
 wait
 for i in $(ls *_complete_phylum_reads.txt);do
-	awk '{ for(i=1;i<=NF;i++){if(i==NF){printf("%s\n",$NF);}else {printf("%s\t",$i)}}}' $i > ${i%_complete_phylum_reads*}_sighits_temp.txt
+	awk -F '\t' '{ for(i=1;i<=NF;i++){if(i==NF){printf("%s\n",$NF);}else {printf("%s\t",$i)}}}' $i > ${i%_complete_phylum_reads*}_sighits_temp.txt
 	echo $'abundance\tqseqid\tsseqid\tlength\tmismatch\tevalue\tpident\tqcovs\tqseq\tsseq\tstaxids\tstitle\tspecies\tgenus\tfamily\torder\tclass\tphylum\tkingdom\tdomain' | \
 	cat - ${i%_complete_phylum_reads*}_sighits_temp.txt > ${i%_complete_phylum_reads*}_sighits.txt
 done
@@ -1756,11 +1842,10 @@ rm *_complete_phylum_reads.txt && rm *_sighits_temp.txt && rm *_phylum_OTU.txt &
 cd $proj_dir/metagenome/sighits/sighits_phylum
 echo -e "${YELLOW}- compiling taxonomic information"
 find . -type f -name '*_sighits.txt' -exec cat {} + > sighits.txt
-awk '{print $11}' sighits.txt | awk '{gsub(";","\n"); print}' | sort -u | sed -e '1s/staxids/tax_id/' > taxids_sighits.txt && rm sighits.txt
-awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}'  $tool_dir/rankedlineage_edited.dmp taxids_sighits.txt | \
-awk '{gsub(/ /,"_"); print }' > rankedlineage_subhits_temp.txt
-awk -F '\t' '{print $8"\t"$9"\t"$10}' rankedlineage_subhits_temp.txt > rankedlineage_subhits.txt && rm rankedlineage_subhits_temp.txt 
-rm taxids_sighits.txt
+awk -F '\t' '{print $18"\t"$19"\t"$20}' sighits.txt > rankedlineage_subhits_temp.txt && rm sighits.txt
+awk -F '\t' '!/phylum/' rankedlineage_subhits_temp.txt > rankedlineage_subhits_temp2.txt && rankedlineage_subhits_temp.txt
+echo $'phylum\tkingdom\tdomain' | cat - rankedlineage_subhits_temp2.txt > rankedlineage_subhits.txt && rankedlineage_subhits_temp2.txt
+
 
 cd $proj_dir/metagenome/sighits/sighits_phylum
 echo -e "${YELLOW}- quantifying the phylum-level taxonomy"
@@ -1794,7 +1879,8 @@ awk '{gsub(/ /,"\t"); print}' phylum_taxa_mean_temp2.txt > ../../results/phylum_
 awk 'NR==1; NR > 1 {s=0; for (i=2;i<=NF;i++) s+=$i; if (s!=0)print}' phylum_taxa_unique_sequences_temp.txt > phylum_taxa_unique_sequences_temp2.txt && rm phylum_taxa_unique_sequences_temp.txt
 awk '{gsub(/ /,"\t"); print}' phylum_taxa_unique_sequences_temp2.txt > ../../results/phylum_level/phylum_taxa_unique_sequences.txt && rm phylum_taxa_unique_sequences_temp2.txt
 awk '{gsub(/ /,"\t"); print}' phylum_taxa_quantification_accuracy_temp.txt > phylum_taxa_quantification_accuracy_temp2.txt && rm phylum_taxa_quantification_accuracy_temp.txt
-awk -F '\t' 'NR==FNR{c[$1]++;next};c[$1] > 0' phylum_taxa_quantification_accuracy_temp2.txt ../../results/phylum_level/phylum_taxa_mean.txt > ../../results/phylum_level/phylum_taxa_quantification_accuracy.txt && rm phylum_taxa_quantification_accuracy_temp2.txt
+awk -F '\t' 'NR==FNR{c[$1]++;next};c[$1] > 0' ../../results/phylum_level/phylum_taxa_mean.txt phylum_taxa_quantification_accuracy_temp2.txt > phylum_taxa_quantification_accuracy_temp3.txt && rm phylum_taxa_quantification_accuracy_temp2.txt
+sed '2,${/phylum/d;}' phylum_taxa_quantification_accuracy_temp3.txt > ../../results/phylum_level/phylum_taxa_quantification_accuracy.txt && rm phylum_taxa_quantification_accuracy_temp3.txt
 
 cd $proj_dir/metagenome/results/phylum_level
 i="_mean$"
@@ -1828,6 +1914,7 @@ if [ "$phylum_level" == "TRUE" ]; then
 fi
 cd $tool_dir
 rm rankedlineage.dmp && rm rankedlineage_edited.dmp
+
 
 
 
