@@ -213,74 +213,44 @@ if [ "$normalization" == "FALSE" ]; then
 	time bypass_norm 2>> $proj_dir/log.out
 fi
 
-strain_blast(){
+blast(){
 echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Prefroming BLAST \n\e[97m########################################################\n"
 cd $proj_dir/metagenome/haplotig
 if [ "$blast_location" == "LOCAL" ]; then
 echo -e "${YELLOW}- preforming a local BLAST"
 	for i in $(ls *_haplotig.fasta);do
 
-		$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $local_db_dir -num_threads $threads -perc_identity 100 -outfmt \
+		$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $local_db_dir -num_threads $threads -evalue 1e-12 -perc_identity 95 -outfmt \
 		"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" \
-		-out ../alignment/${i%_haplotig*}_haplotig_100.megablast
+		-out ../alignment/${i%_haplotig*}_haplotig.megablast
+	done
+	for i in $(ls *_haplotig.megablast);do
+		sort -u $i > ${i%_haplotig*}_haplotig_nd.megablast && rm *_haplotig.megablast
 	done
 fi
 if [ "$blast_location" == "REMOTE" ]; then 
 echo -e "${YELLOW}- preforming a remote BLAST"
 	for i in $(ls *_haplotig.fasta);do
-		$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $remote_db_dir -perc_identity 100 -outfmt \
+		$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $remote_db_dir -evalue 1e-12 -perc_identity 95 -outfmt \
 		"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" \
-		-out ../alignment/${i%_haplotig*}_haplotig_100.megablast -remote
+		-out ../alignment/${i%_haplotig*}_haplotig.megablast -remote
+	done
+	for i in $(ls *_haplotig.megablast);do
+		sort -u $i > ${i%_haplotig*}_haplotig_nd.megablast && rm *_haplotig.megablast
 	done
 fi
 }
-if [ "$strain_level" == "TRUE" ]; then
-	time strain_blast 2>> $proj_dir/log.out
-fi
-
-above_strain_blast(){
-echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Prefroming BLAST \n\e[97m########################################################\n"
-cd $proj_dir/metagenome/haplotig
-if [ "$blast_location" == "LOCAL" ]; then
-echo -e "${YELLOW}- preforming a local BLAST"
-	for i in $(ls *_haplotig.fasta);do
-		$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $local_db_dir -num_threads $threads  -evalue 1e-12 -perc_identity 97 -outfmt \
-		"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" \
-		-out ../alignment/${i%_haplotig*}_haplotig_99.megablast
-	done
-fi
-if [ "$blast_location" == "REMOTE" ]; then 
-echo -e "${YELLOW}- preforming a remote BLAST"
-	for i in $(ls *_haplotig.fasta);do
-		$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $remote_db_dir -evalue 1e-12 -perc_identity 97 -outfmt \
-		"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" \
-		-out ../alignment/${i%_haplotig*}_haplotig_99.megablast -remote
-	done
-fi
-}
-if [ "$species_level" == "TRUE" or "$genus_level" == "TRUE" or "$family_level" == "TRUE" or "$order_level" == "TRUE" or "$class_level" == "TRUE" or "$phylum_level" == "TRUE" ]; then
-	time above_strain_blast 2>> $proj_dir/log.out
-fi
+time blast 2>> $proj_dir/log.out
 
 ##################################################################################################################
 #Removes duplicate rows and vector contamination from *_haplotig.megablast
-cd $proj_dir/metagenome/alignment
-for i in $(ls *_haplotig_100.megablast);do
-	sort -u $i > ${i%_haplotig*}_haplotig_nd_100.megablast
-done
-for i in $(ls *_haplotig_97.megablast);do
-	sort -u $i > ${i%_haplotig*}_haplotig_nd_97.megablast
-done
-rm *_haplotig_100.megablast
-
 awk '{gsub(/\t\t/,"\tNA\t"); print}' $tool_dir/rankedlineage.dmp | awk '{gsub(/[|]/,""); print}' | awk '{gsub(/\t\t/,"\t"); print}' > $tool_dir/rankedlineage_tabdelimited.dmp
 echo $'tax_id\ttaxname\tspecies\tgenus\tfamily\torder\tclass\tphylum\tkingdom\tsuperkingdom\t' | \
 cat - $tool_dir/rankedlineage_tabdelimited.dmp > $tool_dir/rankedlineage_edited.dmp
 rm $tool_dir/rankedlineage_tabdelimited.dmp
 
 ##################################################################################################################
-<<<<<<< HEAD
-strain_filter() {
+strain_filter(){
 cd $proj_dir/metagenome/sighits
 mkdir sighits_strain
 cd $proj_dir/metagenome/results
@@ -289,7 +259,7 @@ cp seqcov.txt ./strain_level
 echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Preforming Strain-Level Classification \n\e[97m########################################################\n"
 cd $proj_dir/metagenome/alignment
 echo -e "${YELLOW}- preforming exact-matching algorithm"
-for i in $(ls *_haplotig_nd_100.megablast);do
+for i in $(ls *_haplotig_nd.megablast);do
 	awk '$6>=100' $i | awk '$7>=100' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_strain/${i%_haplotig*}_filter.txt
 	awk 'NR==FNR {h[$1] = $2; next} {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,h[$1]}' ../haplotig/${i%_haplotig*}_normalized.txt ../sighits/sighits_strain/${i%_haplotig*}_filter.txt | 
 	awk '{print $12,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11}' | awk 'gsub(" ","\t",$0)' > ../sighits/sighits_strain/${i%_haplotig*}_sighits.txt
@@ -302,23 +272,142 @@ for i in $(ls *_sighits.txt);do
 	cat - ${i%.txt}_nr_temp.txt > ${i%.txt}_nr.txt
 done
 rm *_sighits.txt *_nr_temp.txt
-echo -e "${YELLOW}- compiling taxonomic information"
+for i in $(ls *_sighits_nr.txt);do
+	awk -F '\t' 'NR>1{print $0}' $i > ${i%_sighits_nr*}_sighits_nr_temp.txt
+done
+
+for i in $(ls *_sighits_nr_temp.txt);do
+	awk -F '\t' '{print $11}' OFS=';' $i > ${i%_sighits_nr_temp*}_taxids_uniq_inter.txt
+done
+
+for i in $(ls *_uniq_inter.txt);do
+	awk -F ';' '{print $1}' OFS='\t' $i > ${i%_taxids_uniq_inter*}_taxids_uniq.txt
+done
+
+rm *_uniq_inter.txt
 cd $proj_dir/metagenome/sighits/sighits_strain
-find . -type f -name '*_sighits_nr.txt' -exec cat {} + > sighits.txt
-awk '{print $11}' sighits.txt | awk '{gsub(";","\n"); print}' | sort -u -n | sed -e '1s/staxids/tax_id/' > taxids_sighits.txt && rm sighits.txt
-awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}'  $tool_dir/rankedlineage_edited.dmp taxids_sighits.txt | \
-awk '{gsub(/ /,"_"); print }' > rankedlineage_subhits.txt 
-rm taxids_sighits.txt
-cd $proj_dir/metagenome/sighits/sighits_strain/
-awk '{print $1}' rankedlineage_subhits.txt > strain_taxa_mean_temp.txt
-awk '{print $1}' rankedlineage_subhits.txt > strain_taxa_unique_sequences_temp.txt
-awk '{print $1}' rankedlineage_subhits.txt > strain_taxa_quantification_accuracy_temp.txt
+for i in $(ls *_taxids_uniq.txt);do
+	(
+	awk -F '\t' 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' $tool_dir/rankedlineage_edited.dmp OFS='\t' $i> ${i%_taxids_uniq*}_uniq_inter.txt
+	) &
+	if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
+	wait
+	fi 
+done
+wait
+for i in $(ls *_uniq_inter.txt);do
+	(
+	awk -F '\t'  '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' $i > ${i%_uniq_inter*}_species_taxid.txt
+	) &
+	if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
+	wait
+	fi
+done
+rm *_taxids_uniq.txt
+for i in $(ls *_species_taxid.txt);do
+	awk -F '\t' '{print $1}' $i | awk -F ' ' '{print $1, $2}' > ${i%_species_taxid*}_species_column.txt
+done
+for i in $(ls *_species_column.txt);do
+	paste <(awk '{print $0}' OFS='\t' $i) <(awk -F '\t' '{print $1, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' ${i%_species_column*}_species_taxid.txt) | awk -F '\t' '{print $2, $1, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' > ${i%_species_column*}_species_taxa.txt
+done
+for i in $(ls *_sighits_nr_temp.txt);do
+	paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12}' OFS='\t' $i ) <(awk -F '\t' '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' ${i%*_sighits_nr_temp*}_species_taxa.txt) > ${i%_sighits_nr_temp*}_sighits_uncultured.txt
+done
+rm *_species_taxid.txt && rm *_uniq_inter.txt && rm *_species_column.txt && rm *_species_taxa.txt && rm *_sighits_nr.txt && rm *_sighits_nr_temp.txt
+for i in $(ls *_sighits_uncultured.txt);do
+	awk -F '\t' '!/Uncultured/' $i > ${i%_sighits_uncultured*}_sighits_nr.txt
+done
+rm *_sighits_uncultured.txt
 }
 if [ "$strain_level" == "TRUE" ]; then
 	time strain_filter 2>> $proj_dir/log.out
 fi
 
+strain_refseq_filter(){
+cd $proj_dir/metagenome/sighits/sighits/strain
+mkdir strain_gene_annotation
+for i in $(ls *_sighits_nr.txt);do
+	cp $i $proj_dir/metagenome/sighits/sighits_strain/strain_gene_annotation
+done
+cd $proj_dir/metagenome/sighits/sighis_strain/strain_gene_annotation
+for i in $(ls *_sighits_nr.txt);do
+	awk -F '\t' -v var="${i%*_sighits_nr.txt}" '{print $1"\t"var"_"$2"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"$9"\t"$10"\t"$11"\t"$12"\t"$13"\t"$14"\t"$15"\t"$16"\t"$17"\t"$18"\t"$19"\t"$20}' $i > ${i%*_sighits_nr.txt}_refseq_sighits.txt
+done
+rm *_sighits_nr.txt
+for i in $(ls *_refseq_sighits.txt);do
+	awk 'FNR==NR{ h=$0 }NR>1{ print (!a[$11]++? h ORS $0 : $0) >> $11".txt" }' $i
+done
+for i in $(ls *.txt);do
+	sed -i '/^$/d' $i 
+done
+for i in $(ls *_refseq_sighits.txt);do
+	mv $i $proj_dir/metagenome/sighits/sighits_strain
+done
+for i in $(ls *.txt);do
+	awk -F '\t' '{print ">"$2"\n"$9}' $i > ${i%.txt}.fasta
+done
+rm *.txt
+for i in $(ls *.fasta);do
+	$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $refseq_db_dir -num_threads $threads -evalue 1e-10 -max_target_seqs 1 -outfmt "6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" -out ${i%*.fasta}_refseq.megablast
+done
+for i in $(ls *_refseq.megablast);do
+	sort -u $i > ${i%*_refseq.megablast}_refseq_nr.txt
+done
+rm *_refseq.megablast && rm *.fasta
+find . -type f -name '*_refseq_nr.txt' -exec cat {} + > refseq_hits.txt
+awk -F '\t' '{print $10}' OFS=';' refseq_hits.txt > taxids_refseq_inter.txt
+awk -F ';' '{print $1}' OFS='\t' taxids_refseq_inter.txt > taxids_refseq.txt
+rm *_refseq_inter.txt
+for i in $(ls taxids_refseq.txt);do
+	(
+	awk -F '\t' 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' $tool_dir/rankedlineage_edited.dmp OFS='\t' $i> ${i%taxids_refseq*}refseq_inter.txt
+	) &
+	if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
+	wait
+	fi 
+done
+paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11}' OFS='\t' refseq_hits.txt ) <(awk -F '\t' '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' refseq_inter.txt) > refseq_hits_genus.txt
+rm refseq_inter.txt && rm taxids_refseq.txt && rm refseq_hits.txt
+cd $proj_dir/metagenome/sighits/sighits_strain/
+for i in $(ls *_refseq_sighits.txt);do
+	mv $i $proj_dir/metagenome/sighits/sighits_strain/strain_gene_annotation
+done
+cd $proj_dir/metagenome/sighits/sighits_strain/strain_gene_annotation
+find . -type f -name '*_refseq_sighits.txt' -exec cat {} + > refseq_prehits_temp.txt
+awk -F '\t' '!/abundance/' refseq_prehits_temp.txt > refseq_prehits.txt && rm refseq_prehits_temp.txt
+awk -F '\t' '{print $2, $14}' OFS='\t' refseq_prehits.txt > prehits.txt
+awk -F '\t' '{print $1, $14}' OFS='\t' refseq_hits_genus.txt > hits.txt
+awk -F '\t' 'NR==FNR{c[$1$2]++;next};c[$1$2] > 0' prehits.txt hits.txt > consistent_hits_taxids.txt
+awk -F '\t' '{print $1}' consistent_hits_taxids.txt > consistent_hits.txt && rm consistent_hits_taxids.txt
+for i in $(ls *_refseq_sighits.txt);do
+	awk -F '\t' 'NR==FNR{c[$1]++;next};c[$2] > 0' consistent_hits.txt $i > ${i%*_refseq_sighits.txt}_refseq_filtered.txt
+done
+rm consistent_hits.txt && rm hits.txt && rm prehits.txt && rm refseq_prehits.txt && rm *_refseq_sighits.txt && rm *refseq_hits_genus
+for i in $(ls *_refseq_filtered.txt);do
+	mv $i $proj_dir/metagenome/sighits/sighits_strain/
+done 
+cd $proj_dir/metagenome/sighits/sighits_strain/
+for i in $(ls *refseq_filtered.txt);do
+	echo $'abundance\tqseqid\tsseqid\tlength\tmismatch\tevalue\tpident\tqcovs\tqseq\tsseq\tstaxids\tstitle\tspecies\tgenus\tfamily\torder\tclass\tphylum\tkingdom\tdomain' | \
+	cat - $i > ${i%*_refseq_filtered.txt}_sighits_nr.txt
+done
+rm *_refseq_filtered.txt
+}
+if ["$strain_refseq_filter" == "TRUE" ]; then
+	time strain_refseq_filter 2>> $proj_dir/log.out
+fi
+
 strain_stats(){
+echo -e "${YELLOW}- compiling taxonomic information"
+cd $proj_dir/metagenome/sighits/sighits_strain
+find . -type f -name '*_sighits_nr.txt' -exec cat {} + > sighits.txt
+awk -F '\t' '{print $11"\t"$12"\t"$13"\t"$14"\t"$15"\t"$16"\t"$17"\t"$18"\t"$19"\t"$20}' sighits.txt > rankedlineage_subhits.txt && rm sighits.txt
+awk -F '\t' '{print $1}' rankedlineage_subhits.txt | sort -u | awk '!/taxname/' > strain_taxa_mean_temp1.txt
+echo -e 'taxname' | cat - strain_taxa_mean_temp1.txt > strain_taxa_mean_temp.txt && rm strain_taxa_mean_temp1.txt
+awk -F '\t' '{print $1}' rankedlineage_subhits.txt | sort -u | awk '!/taxname/' > strain_taxa_unique_sequences_temp1.txt
+echo -e 'taxname' | cat - strain_taxa_unique_sequences_temp1.txt > strain_taxa_unique_sequences_temp.txt && rm strain_taxa_unique_sequences_temp1.txt
+awk -F '\t' '{print $1}' rankedlineage_subhits.txt | sort -u | awk '!/taxname/' > strain_taxa_quantification_accuracy_temp1.txt
+echo -e 'taxname' | cat - strain_taxa_quantification_accuracy_temp1.txt > strain_taxa_quantification_accuracy_temp.txt && rm strain_taxa_quantification_accuracy_temp1.txt
 echo -e "${YELLOW}- quantifying the strain-level taxonomy" 
 strain_level=strain
 for i in $(ls *_sighits_nr.txt);do
@@ -370,92 +459,6 @@ Rscript $tool_dir/Rscripts/strain_level_boxplots.R $strain_level_mean $strain_le
 mkdir boxplots
 mv *_files $proj_dir/metagenome/results/strain_level/boxplots
 mv *.html $proj_dir/metagenome/results/strain_level/boxplots
-=======
-main() {
-	cd $proj_dir/metagenome/sighits
-	mkdir sighits_strain
-	cd $proj_dir/metagenome/results
-	mkdir strain_level
-	cp seqcov.txt ./strain_level
-	echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Preforming Strain-Level Classification \n\e[97m########################################################\n"
-	cd $proj_dir/metagenome/alignment
-	echo -e "${YELLOW}- preforming exact-matching algorithm"
-	for i in $(ls *_haplotig_nd.megablast);do
-		awk '$6>=100' $i | awk '$7>=100' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_strain/${i%_haplotig*}_filter.txt
-		awk 'NR==FNR {h[$1] = $2; next} {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,h[$1]}' ../haplotig/${i%_haplotig*}_normalized.txt ../sighits/sighits_strain/${i%_haplotig*}_filter.txt | 
-		awk '{print $12,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11}' | awk 'gsub(" ","\t",$0)' > ../sighits/sighits_strain/${i%_haplotig*}_sighits.txt
-	done
-	rm ../sighits/sighits_strain/*_filter.txt 
-	cd $proj_dir/metagenome/sighits/sighits_strain
-	for i in $(ls *_sighits.txt);do
-		awk '{a[$2]++;b[$2]=$0}END{for(x in a)if(a[x]==1)print b[x]}' $i > ${i%.txt}_nr_temp.txt
-		echo $'abundance\tqseqid\tsseqid\tlength\tmismatch\tevalue\tpident\tqcovs\tqseq\tsseq\tstaxids\tstitle' | \
-		cat - ${i%.txt}_nr_temp.txt > ${i%.txt}_nr.txt
-	done
-	rm *_sighits.txt *_nr_temp.txt
-	echo -e "${YELLOW}- compiling taxonomic information"
-	cd $proj_dir/metagenome/sighits/sighits_strain
-	find . -type f -name '*_sighits_nr.txt' -exec cat {} + > sighits.txt
-	awk '{print $11}' sighits.txt | awk '{gsub(";","\n"); print}' | sort -u -n | sed -e '1s/staxids/tax_id/' > taxids_sighits.txt && rm sighits.txt
-	awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}'  $tool_dir/rankedlineage_edited.dmp taxids_sighits.txt | \
-	awk '{gsub(/ /,"_"); print }' > rankedlineage_subhits.txt 
-	rm taxids_sighits.txt
-	cd $proj_dir/metagenome/sighits/sighits_strain/
-	awk '{print $1}' rankedlineage_subhits.txt > strain_taxa_mean_temp.txt
-	awk '{print $1}' rankedlineage_subhits.txt > strain_taxa_unique_sequences_temp.txt
-	awk '{print $1}' rankedlineage_subhits.txt > strain_taxa_quantification_accuracy_temp.txt
-	echo -e "${YELLOW}- quantifying the strain-level taxonomy" 
-	strain_level=strain
-	for i in $(ls *_sighits_nr.txt);do
-		Rscript $tool_dir/Rscripts/stats_summary.R $i $min_uniq $strain_level
-		echo $'tax_id\tmean\tuniq_reads\tstderr' | cat - stats1.txt > stats2.txt 
-		id=${i%_sighits*}_mean && awk -v id=$id '{gsub(/mean/,id); print }' stats2.txt | awk '{print $1,"\t",$2}' > holdmean.txt
-		awk 'FNR==NR{a[$1]=$2;next}{if(a[$1]==""){a[$1]=0}; print $0, a[$1]}'  holdmean.txt strain_taxa_mean_temp.txt > holdmean2.txt && cat holdmean2.txt > strain_taxa_mean_temp.txt
-		id=${i%_sighits*}_uniq_reads && awk -v id=$id '{gsub(/uniq_reads/,id); print }' stats2.txt | awk '{print $1,"\t",$3}' > holduniq_reads.txt
-		awk 'FNR==NR{a[$1]=$2;next}{if(a[$1]==""){a[$1]=0}; print $0, a[$1]}'  holduniq_reads.txt strain_taxa_unique_sequences_temp.txt > holduniq_reads2.txt && cat holduniq_reads2.txt > strain_taxa_unique_sequences_temp.txt
-		id=${i%_sighits*}_stderr && awk -v id=$id '{gsub(/stderr/,id); print }' stats2.txt | awk '{print $1,"\t",$4}' > holdstderr.txt
-		awk 'FNR==NR{a[$1]=$2;next}{if(a[$1]==""){a[$1]=0}; print $0, a[$1]}'  holdstderr.txt strain_taxa_quantification_accuracy_temp.txt > holdstderr2.txt && cat holdstderr2.txt > strain_taxa_quantification_accuracy_temp.txt
-		awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print $1,"\t",$2,"\t",$3,"\t",$4,"\t", a[$1]}'  rankedlineage_subhits.txt stats2.txt > stats3.txt
-		awk '{print $1,$2,$3,$4,$6,$7,$8,$9,$10,$11,$12,$13,$14 }' stats3.txt | awk '{gsub(/ /,"\t"); print }' > ${i%_sighits*}_taxastats.txt
-		rm *stats1* *stats2* *stats3* *hold*
-	done
-		
-	awk 'NR==1; NR > 1 {s=0; for (i=2;i<=NF;i++) s+=$i; if (s!=0)print}' strain_taxa_mean_temp.txt > strain_taxa_mean_temp2.txt && rm strain_taxa_mean_temp.txt
-	awk '{gsub(/ /,"\t"); print}' strain_taxa_mean_temp2.txt > ../../results/strain_level/strain_taxa_mean.txt && rm strain_taxa_mean_temp2.txt
-	awk 'NR==1; NR > 1 {s=0; for (i=2;i<=NF;i++) s+=$i; if (s!=0)print}' strain_taxa_unique_sequences_temp.txt > strain_taxa_unique_sequences_temp2.txt && rm strain_taxa_unique_sequences_temp.txt
-	awk '{gsub(/ /,"\t"); print}' strain_taxa_unique_sequences_temp2.txt > ../../results/strain_level/strain_taxa_unique_sequences.txt && rm strain_taxa_unique_sequences_temp2.txt
-	awk '{gsub(/ /,"\t"); print}' strain_taxa_quantification_accuracy_temp.txt > strain_taxa_quantification_accuracy_temp2.txt && rm strain_taxa_quantification_accuracy_temp.txt
-	awk -F '\t' 'NR==FNR{c[$1]++;next};c[$1] > 0' ../../results/strain_level/strain_taxa_mean.txt strain_taxa_quantification_accuracy_temp2.txt > ../../results/strain_level/strain_taxa_quantification_accuracy.txt && rm strain_taxa_quantification_accuracy_temp2.txt
-	rm *_temp.txt
-	cd $proj_dir/metagenome/results/strain_level
-	i="_mean$"
-	awk -vp="$i" 'NR==1{for(i=1; i<=NF; i++) if ($i~p) {a[i]++;} } { for (i in a) printf "%s\t", $i; printf "\n"}' strain_taxa_mean.txt > temp_mean.txt
-	i="uniq_reads$"
-	awk -vp="$i" 'NR==1{for(i=1; i<=NF; i++) if ($i~p) {a[i]++;} } { for (i in a) printf "%s\t", $i; printf "\n"}' strain_taxa_unique_sequences.txt > temp_uniq.txt
-	paste temp_mean.txt temp_uniq.txt | awk '/^[0-9]/ {for(i=1; i<=NF/2; i++) {s=s OFS $i*$(NF/2+i); }sub(/^ /,x,s);$0=s; s=""} !/[0-9]/{$0=$1;}1' > temp_uniq_mean.txt
-	tail -n +2 temp_uniq_mean.txt > temp_uniq_mean_2.txt
-	awk '{for (i=1; i<=NF; i++) sum[i]+=$i;}; END{for (i in sum) print sum[i];}' temp_uniq_mean_2.txt > temp_uniq_mean_3.txt
-	awk '{sum+=$1}END{print sum}' temp_uniq_mean_3.txt > mean_uniq.txt
-	paste mean_uniq.txt seqcov.txt | awk '{print(($1/$2)* 100)}' > strain_percent_coverage.txt
-	rm *temp* *mean_uniq*
-	cd $proj_dir/metagenome/results/strain_level
-	for i in {mean,unique_sequences,quantification_accuracy}; do
-		awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print $0, a[$1]}'  ../../sighits/sighits_strain/rankedlineage_subhits.txt strain_taxa_${i}.txt | \
-		awk 'NR==1{for(i=1;i<=NF;i++)b[$i]++&&a[i]}{for(i in a)$i="";gsub(" +"," ")}1' | awk '{gsub(/ /,"\t"); print }' > strain_taxainfo_${i}.txt
-	done
-	rm *_taxa_*
-	echo -e "${YELLOW}- creating strain-level visualizations"
-	cd $proj_dir/metagenome/results/strain_level
-	strain_level_mean=strain_taxainfo_mean.txt
-	strain_level_uniq=strain_taxainfo_unique_sequences.txt
-	strain_level_stderr=strain_taxainfo_quantification_accuracy.txt
-	percent_thresh=5
-	Rscript $tool_dir/Rscripts/strain_level_corr.R $strain_level_mean $percent_thresh &>/dev/null
-	Rscript $tool_dir/Rscripts/strain_level_boxplots.R $strain_level_mean $strain_level_uniq $strain_level_stderr $percent_thresh &>/dev/null
-	mkdir boxplots
-	mv *_files $proj_dir/metagenome/results/strain_level/boxplots
-	mv *.html $proj_dir/metagenome/results/strain_level/boxplots
->>>>>>> 5bf222ed7b5e897ab327a62a30ddf430f6006c82
 }
 if [ "$strain_level" == "TRUE" ]; then
 	time strain_stats 2>> $proj_dir/log.out
@@ -471,8 +474,8 @@ cp seqcov.txt ./species_level
 echo -e "\e[97m########################################################\n \e[38;5;210mQmatey is Preforming Species-Level Classification \n\e[97m########################################################\n"
 cd $proj_dir/metagenome/alignment
 echo -e "${YELLOW}- preforming exact-matching algorithm"
-for i in $(ls *_haplotig_nd_97.megablast);do
-	#awk '$6>=97' $i | awk '$7>=97' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_species/${i%_haplotig*}_filter.txt
+for i in $(ls *_haplotig_nd.megablast);do
+	awk '$6>=97' $i | awk 'gsub(" ","_",$0)' > ../sighits/sighits_species/${i%_haplotig*}_filter.txt
 	awk 'NR==FNR {h[$1] = $2; next} {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,h[$1]}' ../haplotig/${i%_haplotig*}_normalized.txt ../sighits/sighits_species/${i%_haplotig*}_filter.txt | 
 	awk '{print $12,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11}' | awk 'gsub(" ","\t",$0)' > ../sighits/sighits_species/${i%_haplotig*}_sighits.txt
 done
@@ -697,7 +700,7 @@ if [ "$species_level" == "TRUE" ]; then
 	time species_stats 2>> $proj_dir/log.out
 fi
 ################################################################################################################
-genus_filter() {
+genus_filter(){
 cd $proj_dir/metagenome/sighits
 mkdir sighits_genus
 cd $proj_dir/metagenome/results
@@ -708,7 +711,7 @@ echo -e "\e[97m########################################################\n \e[38;
 cd $proj_dir/metagenome/alignment
 echo -e "${YELLOW}- preforming exact-matching algorithm"
 for i in $(ls *_haplotig_nd.megablast);do
-	awk '$6>=97' $i | awk '$7>=97' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_genus/${i%_haplotig*}_filter.txt
+	awk '$6>=97' $i | awk 'gsub(" ","_",$0)' > ../sighits/sighits_genus/${i%_haplotig*}_filter.txt
 	awk 'NR==FNR {h[$1] = $2; next} {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,h[$1]}' ../haplotig/${i%_haplotig*}_normalized.txt ../sighits/sighits_genus/${i%_haplotig*}_filter.txt | 
 	awk '{print $12,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11}' | awk 'gsub(" ","\t",$0)' > ../sighits/sighits_genus/${i%_haplotig*}_sighits.txt
 done
@@ -875,7 +878,7 @@ echo -e 'genus' | cat - genus_taxa_quantification_accuracy_temp1.txt > genus_tax
 if [ "$genus_level" == "TRUE" ]; then
 	time genus_filter 2>> $proj_dir/log.out
 fi
-genus_stats() {
+genus_stats(){
 genus_level=genus
 for i in $(ls *_sighits.txt);do
 	Rscript $tool_dir/Rscripts/stats_summary.R $i $min_uniq $genus_level
@@ -929,7 +932,7 @@ if [ "$genus_level" == "TRUE" ]; then
 	time genus_stats 2>> $proj_dir/log.out
 fi
 ################################################################################################################
-family_filter() {
+family_filter(){
 cd $proj_dir/metagenome/sighits
 mkdir sighits_family
 cd $proj_dir/metagenome/results
@@ -939,7 +942,7 @@ echo -e "\e[97m########################################################\n \e[38;
 cd $proj_dir/metagenome/alignment
 echo -e "${YELLOW}- preforming exact-matching algorithm"
 for i in $(ls *_haplotig_nd.megablast);do
-	awk '$6>=95' $i | awk '$7>=95' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_family/${i%_haplotig*}_filter.txt
+	awk '$6>=97' $i | awk 'gsub(" ","_",$0)' > ../sighits/sighits_family/${i%_haplotig*}_filter.txt
 	awk 'NR==FNR {h[$1] = $2; next} {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,h[$1]}' ../haplotig/${i%_haplotig*}_normalized.txt ../sighits/sighits_family/${i%_haplotig*}_filter.txt | 
 	awk '{print $12,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11}' | awk 'gsub(" ","\t",$0)' > ../sighits/sighits_family/${i%_haplotig*}_sighits.txt
 done
@@ -1122,7 +1125,7 @@ if [ "$family_level" == "TRUE" ]; then
 	time family_filter 2>> $proj_dir/log.out
 fi
 
-family_stats() {
+family_stats(){
 family_level=family
 for i in $(ls *_sighits.txt);do
 	Rscript $tool_dir/Rscripts/stats_summary.R $i $min_uniq $family_level
@@ -1186,7 +1189,7 @@ echo -e "\e[97m########################################################\n \e[38;
 cd $proj_dir/metagenome/alignment
 echo -e "${YELLOW}- preforming exact-matching algorithm"
 for i in $(ls *_haplotig_nd.megablast);do
-	awk '$6>=95' $i | awk '$7>=95' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_order/${i%_haplotig*}_filter.txt
+	awk '$6>=97' $i | awk 'gsub(" ","_",$0)' > ../sighits/sighits_order/${i%_haplotig*}_filter.txt
 	awk 'NR==FNR {h[$1] = $2; next} {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,h[$1]}' ../haplotig/${i%_haplotig*}_normalized.txt ../sighits/sighits_order/${i%_haplotig*}_filter.txt | 
 	awk '{print $12,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11}' | awk 'gsub(" ","\t",$0)' > ../sighits/sighits_order/${i%_haplotig*}_sighits.txt
 done
@@ -1422,7 +1425,7 @@ if [ "$order_level" == "TRUE" ]; then
 	time order_stats 2>> $proj_dir/log.out
 fi
 ################################################################################################################
-class_filter() {
+class_filter(){
 cd $proj_dir/metagenome/sighits
 mkdir sighits_class
 cd $proj_dir/metagenome/results
@@ -1432,7 +1435,7 @@ echo -e "\e[97m########################################################\n \e[38;
 cd $proj_dir/metagenome/alignment
 echo -e "${YELLOW}- preforming exact-matching algorithm"
 for i in $(ls *_haplotig_nd.megablast);do
-	awk '$6>=95' $i | awk '$7>=95' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_class/${i%_haplotig*}_filter.txt
+	awk '$6>=97' $i | awk 'gsub(" ","_",$0)' > ../sighits/sighits_class/${i%_haplotig*}_filter.txt
 	awk 'NR==FNR {h[$1] = $2; next} {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,h[$1]}' ../haplotig/${i%_haplotig*}_normalized.txt ../sighits/sighits_class/${i%_haplotig*}_filter.txt | 
 	awk '{print $12,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11}' | awk 'gsub(" ","\t",$0)' > ../sighits/sighits_class/${i%_haplotig*}_sighits.txt
 done
@@ -1667,7 +1670,7 @@ if [ "$class_level" == "TRUE" ]; then
 	time class_stats 2>> $proj_dir/log.out
 fi
 
-phylum_filter() {
+phylum_filter(){
 cd $proj_dir/metagenome/sighits
 mkdir sighits_phylum
 cd $proj_dir/metagenome/results
@@ -1677,7 +1680,7 @@ echo -e "\e[97m########################################################\n \e[38;
 cd $proj_dir/metagenome/alignment
 echo -e "${YELLOW}- preforming exact-matching algorithm"
 for i in $(ls *_haplotig_nd.megablast);do
-	awk '$6>=95' $i | awk '$7>=95' | awk 'gsub(" ","_",$0)' > ../sighits/sighits_phylum/${i%_haplotig*}_filter.txt
+	awk '$6>=97' $i | awk 'gsub(" ","_",$0)' > ../sighits/sighits_phylum/${i%_haplotig*}_filter.txt
 	awk 'NR==FNR {h[$1] = $2; next} {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,h[$1]}' ../haplotig/${i%_haplotig*}_normalized.txt ../sighits/sighits_phylum/${i%_haplotig*}_filter.txt | 
 	awk '{print $12,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11}' | awk 'gsub(" ","\t",$0)' > ../sighits/sighits_phylum/${i%_haplotig*}_sighits.txt
 done
@@ -1859,7 +1862,7 @@ echo -e 'phylum' | cat - phylum_taxa_quantification_accuracy_temp1.txt > phylum_
 if [ "$phylum_level" == "TRUE" ]; then
 	time phylum_filter 2>> $proj_dir/log.out
 fi
-phylum_stats()
+phylum_stats(){
 phylum_level=phylum
 for i in $(ls *_sighits.txt);do
 	Rscript $tool_dir/Rscripts/stats_summary.R $i $min_uniq $phylum_level
