@@ -125,8 +125,8 @@ done
 awk  'gsub("_host_coverage.txt:", "\t", $0)'  holdhost_coverage.txt > host_coverage.txt
 awk  'gsub("_microbiome_coverage.txt:", "\t", $0)'  holdmicrobiome_coverage.txt > microbiome_coverage.txt
 join host_coverage.txt microbiome_coverage.txt > coverage_normalize.txt
-average=$(awk '{ total += $2 } END { print total/NR }' coverage_normalize.txt)
-awk -v average=$average '{print $1,$2/average}' coverage_normalize.txt > coverage_normalization_factor.txt
+minimum=$(awk 'min=="" || $2 < min {min=$2} END {print min}' coverage_normalize.txt)
+awk -v minimum=$minimum '{print $1,$2/minimum}' coverage_normalize.txt > coverage_normalization_factor.txt
 rm empty* && rm hold* && rm append* && rm host* && rm microbiome*
 
 echo -e "${YELLOW}- reformatting metagenomic reads into .fasta format" 
@@ -219,13 +219,9 @@ cd $proj_dir/metagenome/haplotig
 if [ "$blast_location" == "LOCAL" ]; then
 echo -e "${YELLOW}- preforming a local BLAST"
 	for i in $(ls *_haplotig.fasta);do
-
 		$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $local_db_dir -num_threads $threads -evalue 1e-12 -perc_identity 95 -outfmt \
 		"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" \
 		-out ../alignment/${i%_haplotig*}_haplotig.megablast
-	done
-	for i in $(ls *_haplotig.megablast);do
-		sort -u $i > ${i%_haplotig*}_haplotig_nd.megablast && rm *_haplotig.megablast
 	done
 fi
 if [ "$blast_location" == "REMOTE" ]; then 
@@ -235,22 +231,26 @@ echo -e "${YELLOW}- preforming a remote BLAST"
 		"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" \
 		-out ../alignment/${i%_haplotig*}_haplotig.megablast -remote
 	done
-	for i in $(ls *_haplotig.megablast);do
-		sort -u $i > ${i%_haplotig*}_haplotig_nd.megablast && rm *_haplotig.megablast
-	done
 fi
 }
-time blast 2>> $proj_dir/log.out
+blast &> $proj_dir/log.out
+exit
 
 ##################################################################################################################
 #Removes duplicate rows and vector contamination from *_haplotig.megablast
+cd $proj_dir/metagenome/alignment
+for i in $(ls *_haplotig.megablast);do
+	sort -u $i > ${i%_haplotig*}_haplotig_nd.megablast && rm *_haplotig.megablast
+done
+
+
 awk '{gsub(/\t\t/,"\tNA\t"); print}' $tool_dir/rankedlineage.dmp | awk '{gsub(/[|]/,""); print}' | awk '{gsub(/\t\t/,"\t"); print}' > $tool_dir/rankedlineage_tabdelimited.dmp
 echo $'tax_id\ttaxname\tspecies\tgenus\tfamily\torder\tclass\tphylum\tkingdom\tsuperkingdom\t' | \
 cat - $tool_dir/rankedlineage_tabdelimited.dmp > $tool_dir/rankedlineage_edited.dmp
 rm $tool_dir/rankedlineage_tabdelimited.dmp
 
 ##################################################################################################################
-strain_filter(){
+strain_filter() {
 cd $proj_dir/metagenome/sighits
 mkdir sighits_strain
 cd $proj_dir/metagenome/results
@@ -272,141 +272,23 @@ for i in $(ls *_sighits.txt);do
 	cat - ${i%.txt}_nr_temp.txt > ${i%.txt}_nr.txt
 done
 rm *_sighits.txt *_nr_temp.txt
-for i in $(ls *_sighits_nr.txt);do
-	awk -F '\t' 'NR>1{print $0}' $i > ${i%_sighits_nr*}_sighits_nr_temp.txt
-done
-
-for i in $(ls *_sighits_nr_temp.txt);do
-	awk -F '\t' '{print $11}' OFS=';' $i > ${i%_sighits_nr_temp*}_taxids_uniq_inter.txt
-done
-
-for i in $(ls *_uniq_inter.txt);do
-	awk -F ';' '{print $1}' OFS='\t' $i > ${i%_taxids_uniq_inter*}_taxids_uniq.txt
-done
-
-rm *_uniq_inter.txt
+echo -e "${YELLOW}- compiling taxonomic information"
 cd $proj_dir/metagenome/sighits/sighits_strain
-for i in $(ls *_taxids_uniq.txt);do
-	(
-	awk -F '\t' 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' $tool_dir/rankedlineage_edited.dmp OFS='\t' $i> ${i%_taxids_uniq*}_uniq_inter.txt
-	) &
-	if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
-	wait
-	fi 
-done
-wait
-for i in $(ls *_uniq_inter.txt);do
-	(
-	awk -F '\t'  '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' $i > ${i%_uniq_inter*}_species_taxid.txt
-	) &
-	if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
-	wait
-	fi
-done
-rm *_taxids_uniq.txt
-for i in $(ls *_species_taxid.txt);do
-	awk -F '\t' '{print $1}' $i | awk -F ' ' '{print $1, $2}' > ${i%_species_taxid*}_species_column.txt
-done
-for i in $(ls *_species_column.txt);do
-	paste <(awk '{print $0}' OFS='\t' $i) <(awk -F '\t' '{print $1, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' ${i%_species_column*}_species_taxid.txt) | awk -F '\t' '{print $2, $1, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' > ${i%_species_column*}_species_taxa.txt
-done
-for i in $(ls *_sighits_nr_temp.txt);do
-	paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12}' OFS='\t' $i ) <(awk -F '\t' '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' ${i%*_sighits_nr_temp*}_species_taxa.txt) > ${i%_sighits_nr_temp*}_sighits_uncultured.txt
-done
-rm *_species_taxid.txt && rm *_uniq_inter.txt && rm *_species_column.txt && rm *_species_taxa.txt && rm *_sighits_nr.txt && rm *_sighits_nr_temp.txt
-for i in $(ls *_sighits_uncultured.txt);do
-	awk -F '\t' '!/Uncultured/' $i > ${i%_sighits_uncultured*}_sighits_nr.txt
-done
-rm *_sighits_uncultured.txt
+find . -type f -name '*_sighits_nr.txt' -exec cat {} + > sighits.txt
+awk '{print $11}' sighits.txt | awk '{gsub(";","\n"); print}' | sort -u -n | sed -e '1s/staxids/tax_id/' > taxids_sighits.txt && rm sighits.txt
+awk 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}'  $tool_dir/rankedlineage_edited.dmp taxids_sighits.txt | \
+awk '{gsub(/ /,"_"); print }' > rankedlineage_subhits.txt 
+rm taxids_sighits.txt
+cd $proj_dir/metagenome/sighits/sighits_strain/
+awk '{print $1}' rankedlineage_subhits.txt > strain_taxa_mean_temp.txt
+awk '{print $1}' rankedlineage_subhits.txt > strain_taxa_unique_sequences_temp.txt
+awk '{print $1}' rankedlineage_subhits.txt > strain_taxa_quantification_accuracy_temp.txt
 }
 if [ "$strain_level" == "TRUE" ]; then
 	time strain_filter 2>> $proj_dir/log.out
 fi
 
-strain_refseq_filter(){
-cd $proj_dir/metagenome/sighits/sighits/strain
-mkdir strain_gene_annotation
-for i in $(ls *_sighits_nr.txt);do
-	cp $i $proj_dir/metagenome/sighits/sighits_strain/strain_gene_annotation
-done
-cd $proj_dir/metagenome/sighits/sighis_strain/strain_gene_annotation
-for i in $(ls *_sighits_nr.txt);do
-	awk -F '\t' -v var="${i%*_sighits_nr.txt}" '{print $1"\t"var"_"$2"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"$9"\t"$10"\t"$11"\t"$12"\t"$13"\t"$14"\t"$15"\t"$16"\t"$17"\t"$18"\t"$19"\t"$20}' $i > ${i%*_sighits_nr.txt}_refseq_sighits.txt
-done
-rm *_sighits_nr.txt
-for i in $(ls *_refseq_sighits.txt);do
-	awk 'FNR==NR{ h=$0 }NR>1{ print (!a[$11]++? h ORS $0 : $0) >> $11".txt" }' $i
-done
-for i in $(ls *.txt);do
-	sed -i '/^$/d' $i 
-done
-for i in $(ls *_refseq_sighits.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_strain
-done
-for i in $(ls *.txt);do
-	awk -F '\t' '{print ">"$2"\n"$9}' $i > ${i%.txt}.fasta
-done
-rm *.txt
-for i in $(ls *.fasta);do
-	$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $refseq_db_dir -num_threads $threads -evalue 1e-10 -max_target_seqs 1 -outfmt "6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" -out ${i%*.fasta}_refseq.megablast
-done
-for i in $(ls *_refseq.megablast);do
-	sort -u $i > ${i%*_refseq.megablast}_refseq_nr.txt
-done
-rm *_refseq.megablast && rm *.fasta
-find . -type f -name '*_refseq_nr.txt' -exec cat {} + > refseq_hits.txt
-awk -F '\t' '{print $10}' OFS=';' refseq_hits.txt > taxids_refseq_inter.txt
-awk -F ';' '{print $1}' OFS='\t' taxids_refseq_inter.txt > taxids_refseq.txt
-rm *_refseq_inter.txt
-for i in $(ls taxids_refseq.txt);do
-	(
-	awk -F '\t' 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' $tool_dir/rankedlineage_edited.dmp OFS='\t' $i> ${i%taxids_refseq*}refseq_inter.txt
-	) &
-	if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
-	wait
-	fi 
-done
-paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11}' OFS='\t' refseq_hits.txt ) <(awk -F '\t' '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' refseq_inter.txt) > refseq_hits_genus.txt
-rm refseq_inter.txt && rm taxids_refseq.txt && rm refseq_hits.txt
-cd $proj_dir/metagenome/sighits/sighits_strain/
-for i in $(ls *_refseq_sighits.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_strain/strain_gene_annotation
-done
-cd $proj_dir/metagenome/sighits/sighits_strain/strain_gene_annotation
-find . -type f -name '*_refseq_sighits.txt' -exec cat {} + > refseq_prehits_temp.txt
-awk -F '\t' '!/abundance/' refseq_prehits_temp.txt > refseq_prehits.txt && rm refseq_prehits_temp.txt
-awk -F '\t' '{print $2, $14}' OFS='\t' refseq_prehits.txt > prehits.txt
-awk -F '\t' '{print $1, $14}' OFS='\t' refseq_hits_genus.txt > hits.txt
-awk -F '\t' 'NR==FNR{c[$1$2]++;next};c[$1$2] > 0' prehits.txt hits.txt > consistent_hits_taxids.txt
-awk -F '\t' '{print $1}' consistent_hits_taxids.txt > consistent_hits.txt && rm consistent_hits_taxids.txt
-for i in $(ls *_refseq_sighits.txt);do
-	awk -F '\t' 'NR==FNR{c[$1]++;next};c[$2] > 0' consistent_hits.txt $i > ${i%*_refseq_sighits.txt}_refseq_filtered.txt
-done
-rm consistent_hits.txt && rm hits.txt && rm prehits.txt && rm refseq_prehits.txt && rm *_refseq_sighits.txt && rm *refseq_hits_genus
-for i in $(ls *_refseq_filtered.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_strain/
-done 
-cd $proj_dir/metagenome/sighits/sighits_strain/
-for i in $(ls *refseq_filtered.txt);do
-	echo $'abundance\tqseqid\tsseqid\tlength\tmismatch\tevalue\tpident\tqcovs\tqseq\tsseq\tstaxids\tstitle\tspecies\tgenus\tfamily\torder\tclass\tphylum\tkingdom\tdomain' | \
-	cat - $i > ${i%*_refseq_filtered.txt}_sighits_nr.txt
-done
-rm *_refseq_filtered.txt
-if [ "$refseq_filter" == "TRUE" ] && [ "$strain_level" == "TRUE" ]; then
-	time strain_refseq_filter 2>> $proj_dir/log.out
-fi
-
 strain_stats(){
-echo -e "${YELLOW}- compiling taxonomic information"
-cd $proj_dir/metagenome/sighits/sighits_strain
-find . -type f -name '*_sighits_nr.txt' -exec cat {} + > sighits.txt
-awk -F '\t' '{print $11"\t"$12"\t"$13"\t"$14"\t"$15"\t"$16"\t"$17"\t"$18"\t"$19"\t"$20}' sighits.txt > rankedlineage_subhits.txt && rm sighits.txt
-awk -F '\t' '{print $1}' rankedlineage_subhits.txt | sort -u | awk '!/taxname/' > strain_taxa_mean_temp1.txt
-echo -e 'taxname' | cat - strain_taxa_mean_temp1.txt > strain_taxa_mean_temp.txt && rm strain_taxa_mean_temp1.txt
-awk -F '\t' '{print $1}' rankedlineage_subhits.txt | sort -u | awk '!/taxname/' > strain_taxa_unique_sequences_temp1.txt
-echo -e 'taxname' | cat - strain_taxa_unique_sequences_temp1.txt > strain_taxa_unique_sequences_temp.txt && rm strain_taxa_unique_sequences_temp1.txt
-awk -F '\t' '{print $1}' rankedlineage_subhits.txt | sort -u | awk '!/taxname/' > strain_taxa_quantification_accuracy_temp1.txt
-echo -e 'taxname' | cat - strain_taxa_quantification_accuracy_temp1.txt > strain_taxa_quantification_accuracy_temp.txt && rm strain_taxa_quantification_accuracy_temp1.txt
 echo -e "${YELLOW}- quantifying the strain-level taxonomy" 
 strain_level=strain
 for i in $(ls *_sighits_nr.txt);do
@@ -459,6 +341,7 @@ mkdir boxplots
 mv *_files $proj_dir/metagenome/results/strain_level/boxplots
 mv *.html $proj_dir/metagenome/results/strain_level/boxplots
 }
+
 if [ "$strain_level" == "TRUE" ]; then
 	time strain_stats 2>> $proj_dir/log.out
 fi
@@ -634,87 +517,6 @@ for i in $(ls *_sighits_temp2.txt);do
 done
 
 rm *_complete_species_reads.txt && rm *_sighits_temp.txt && rm *_species_OTU.txt && rm *_unique_reads.txt && rm *_sighits_temp2.txt
-}
-if [ "$species_level" == "TRUE" ]; then
-	time species_filter 2>> $proj_dir/log.out
-fi
-
-species_refseq_filter(){
-cd $proj_dir/metagenome/sighits/sighits/species
-mkdir species_gene_annotation
-for i in $(ls *_sighits.txt);do
-	cp $i $proj_dir/metagenome/sighits/sighits_species/species_gene_annotation
-done
-cd $proj_dir/metagenome/sighits/sighis_species/species_gene_annotation
-for i in $(ls *_sighits.txt);do
-	awk -F '\t' -v var="${i%*_sighits.txt}" '{print $1"\t"var"_"$2"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"$9"\t"$10"\t"$11"\t"$12"\t"$13"\t"$14"\t"$15"\t"$16"\t"$17"\t"$18"\t"$19"\t"$20}' $i > ${i%*_sighits.txt}_refseq_sighits.txt
-done
-rm *_sighits.txt
-for i in $(ls *_refseq_sighits.txt);do
-	awk 'FNR==NR{ h=$0 }NR>1{ print (!a[$13]++? h ORS $0 : $0) >> $13".txt" }' $i
-done
-
-for i in $(ls *.txt);do
-	sed -i '/^$/d' $i 
-done
-for i in $(ls *_refseq_sighits.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_species
-done
-for i in $(ls *.txt);do
-	awk -F '\t' '{print ">"$2"\n"$9}' $i > ${i%.txt}.fasta
-done
-rm *.txt
-for i in $(ls *.fasta);do
-	$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $refseq_db_dir -num_threads $threads -evalue 1e-10 -max_target_seqs 1 -outfmt "6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" -out ${i%*.fasta}_refseq.megablast
-done
-for i in $(ls *_refseq.megablast);do
-	sort -u $i > ${i%*_refseq.megablast}_refseq_nr.txt
-done
-rm *_refseq.megablast && rm *.fasta
-find . -type f -name '*_refseq_nr.txt' -exec cat {} + > refseq_hits.txt
-awk -F '\t' '{print $10}' OFS=';' refseq_hits.txt > taxids_refseq_inter.txt
-awk -F ';' '{print $1}' OFS='\t' taxids_refseq_inter.txt > taxids_refseq.txt
-rm *_refseq_inter.txt
-for i in $(ls taxids_refseq.txt);do
-	(
-	awk -F '\t' 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' $tool_dir/rankedlineage_edited.dmp OFS='\t' $i> ${i%taxids_refseq*}refseq_inter.txt
-	) &
-	if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
-	wait
-	fi 
-done
-paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11}' OFS='\t' refseq_hits.txt ) <(awk -F '\t' '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' refseq_inter.txt) > refseq_hits_genus.txt
-rm refseq_inter.txt && rm taxids_refseq.txt && rm refseq_hits.txt
-cd $proj_dir/metagenome/sighits/sighits_species/
-for i in $(ls *_refseq_sighits.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_species/species_gene_annotation
-done
-cd $proj_dir/metagenome/sighits/sighits_species/species_gene_annotation
-find . -type f -name '*_refseq_sighits.txt' -exec cat {} + > refseq_prehits_temp.txt
-awk -F '\t' '!/abundance/' refseq_prehits_temp.txt > refseq_prehits.txt && rm refseq_prehits_temp.txt
-awk -F '\t' '{print $2, $14}' OFS='\t' refseq_prehits.txt > prehits.txt
-awk -F '\t' '{print $1, $14}' OFS='\t' refseq_hits_genus.txt > hits.txt
-awk -F '\t' 'NR==FNR{c[$1$2]++;next};c[$1$2] > 0' prehits.txt hits.txt > consistent_hits_taxids.txt
-awk -F '\t' '{print $1}' consistent_hits_taxids.txt > consistent_hits.txt && rm consistent_hits_taxids.txt
-for i in $(ls *_refseq_sighits.txt);do
-	awk -F '\t' 'NR==FNR{c[$1]++;next};c[$2] > 0' consistent_hits.txt $i > ${i%*_refseq_sighits.txt}_refseq_filtered.txt
-done
-rm consistent_hits.txt && rm hits.txt && rm prehits.txt && rm refseq_prehits.txt && rm *_refseq_sighits.txt && rm *refseq_hits_genus
-for i in $(ls *_refseq_filtered.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_species/
-done 
-cd $proj_dir/metagenome/sighits/sighits_species/
-for i in $(ls *refseq_filtered.txt);do
-	echo $'abundance\tqseqid\tsseqid\tlength\tmismatch\tevalue\tpident\tqcovs\tqseq\tsseq\tstaxids\tstitle\tspecies\tgenus\tfamily\torder\tclass\tphylum\tkingdom\tdomain' | \
-	cat - $i > ${i%*_refseq_filtered.txt}_sighits.txt
-done
-rm *_refseq_filtered.txt
-}
-if [ "$refseq_filter" == "TRUE" ] && [ "$species_level" == "TRUE" ]; then
-	time species_refseq_filter 2>> $proj_dir/log.out
-fi
-
-species_stats(){
 cd $proj_dir/metagenome/sighits/sighits_species
 find . -type f -name '*_sighits.txt' -exec cat {} + > sighits.txt
 awk -F '\t' '{print $13"\t"$14"\t"$15"\t"$16"\t"$17"\t"$18"\t"$19"\t"$20}' sighits.txt > rankedlineage_subhits.txt && rm sighits.txt
@@ -725,6 +527,11 @@ awk -F '\t' '{print $1}' rankedlineage_subhits.txt | sort -u | awk '!/species/' 
 echo -e 'species' | cat - species_taxa_unique_sequences_temp1.txt > species_taxa_unique_sequences_temp.txt && rm species_taxa_unique_sequences_temp1.txt
 awk -F '\t' '{print $1}' rankedlineage_subhits.txt | sort -u | awk '!/species/' > species_taxa_quantification_accuracy_temp1.txt
 echo -e 'species' | cat - species_taxa_quantification_accuracy_temp1.txt > species_taxa_quantification_accuracy_temp.txt && rm species_taxa_quantification_accuracy_temp1.txt
+}
+if [ "$species_level" == "TRUE" ]; then
+	time species_filter 2>> $proj_dir/log.out
+fi
+species_stats(){
 species_level=species
 for i in $(ls *_sighits.txt);do
 	Rscript $tool_dir/Rscripts/stats_summary.R $i $min_uniq $species_level
@@ -775,7 +582,7 @@ if [ "$species_level" == "TRUE" ]; then
 	time species_stats 2>> $proj_dir/log.out
 fi
 ################################################################################################################
-genus_filter(){
+genus_filter() {
 cd $proj_dir/metagenome/sighits
 mkdir sighits_genus
 cd $proj_dir/metagenome/results
@@ -786,7 +593,7 @@ echo -e "\e[97m########################################################\n \e[38;
 cd $proj_dir/metagenome/alignment
 echo -e "${YELLOW}- preforming exact-matching algorithm"
 for i in $(ls *_haplotig_nd.megablast);do
-	awk '$6>=97' $i | awk 'gsub(" ","_",$0)' > ../sighits/sighits_genus/${i%_haplotig*}_filter.txt
+	awk '$6>=97' $i awk 'gsub(" ","_",$0)' > ../sighits/sighits_genus/${i%_haplotig*}_filter.txt
 	awk 'NR==FNR {h[$1] = $2; next} {print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,h[$1]}' ../haplotig/${i%_haplotig*}_normalized.txt ../sighits/sighits_genus/${i%_haplotig*}_filter.txt | 
 	awk '{print $12,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11}' | awk 'gsub(" ","\t",$0)' > ../sighits/sighits_genus/${i%_haplotig*}_sighits.txt
 done
@@ -940,86 +747,7 @@ find . -type f -name '*_sighits.txt' -exec cat {} + > sighits.txt
 awk -F '\t' '{print $14"\t"$15"\t"$16"\t"$17"\t"$18"\t"$19"\t"$20}' sighits.txt > rankedlineage_subhits_temp.txt && rm sighits.txt
 awk -F '\t' '!/genus/' rankedlineage_subhits_temp.txt > rankedlineage_subhits_temp2.txt && rankedlineage_subhits_temp.txt
 echo $'genus\tfamily\torder\tclass\tphylum\tkingdom\tdomain' | cat - rankedlineage_subhits_temp2.txt > rankedlineage_subhits.txt && rankedlineage_subhits_temp2.txt
-}
-if [ "$genus_level" == "TRUE" ]; then
-	time genus_filter 2>> $proj_dir/log.out
-fi
-genus_refseq_filter(){
-cd $proj_dir/metagenome/sighits/sighits/genus
-mkdir genus_gene_annotation
-for i in $(ls *_sighits.txt);do
-	cp $i $proj_dir/metagenome/sighits/sighits_genus/genus_gene_annotation
-done
-cd $proj_dir/metagenome/sighits/sighis_genus/genus_gene_annotation
-for i in $(ls *_sighits.txt);do
-	awk -F '\t' -v var="${i%*_sighits.txt}" '{print $1"\t"var"_"$2"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"$9"\t"$10"\t"$11"\t"$12"\t"$13"\t"$14"\t"$15"\t"$16"\t"$17"\t"$18"\t"$19"\t"$20}' $i > ${i%*_sighits.txt}_refseq_sighits.txt
-done
-rm *_sighits.txt
-for i in $(ls *_refseq_sighits.txt);do
-	awk 'FNR==NR{ h=$0 }NR>1{ print (!a[$14]++? h ORS $0 : $0) >> $14".txt" }' $i
-done
 
-for i in $(ls *.txt);do
-	sed -i '/^$/d' $i 
-done
-for i in $(ls *_refseq_sighits.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_genus
-done
-for i in $(ls *.txt);do
-	awk -F '\t' '{print ">"$2"\n"$9}' $i > ${i%.txt}.fasta
-done
-rm *.txt
-for i in $(ls *.fasta);do
-	$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $refseq_db_dir -num_threads $threads -evalue 1e-10 -max_target_seqs 1 -outfmt "6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" -out ${i%*.fasta}_refseq.megablast
-done
-for i in $(ls *_refseq.megablast);do
-	sort -u $i > ${i%*_refseq.megablast}_refseq_nr.txt
-done
-rm *_refseq.megablast && rm *.fasta
-find . -type f -name '*_refseq_nr.txt' -exec cat {} + > refseq_hits.txt
-awk -F '\t' '{print $10}' OFS=';' refseq_hits.txt > taxids_refseq_inter.txt
-awk -F ';' '{print $1}' OFS='\t' taxids_refseq_inter.txt > taxids_refseq.txt
-rm *_refseq_inter.txt
-for i in $(ls taxids_refseq.txt);do
-	(
-	awk -F '\t' 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' $tool_dir/rankedlineage_edited.dmp OFS='\t' $i> ${i%taxids_refseq*}refseq_inter.txt
-	) &
-	if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
-	wait
-	fi 
-done
-paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11}' OFS='\t' refseq_hits.txt ) <(awk -F '\t' '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' refseq_inter.txt) > refseq_hits_genus.txt
-rm refseq_inter.txt && rm taxids_refseq.txt && rm refseq_hits.txt
-cd $proj_dir/metagenome/sighits/sighits_genus/
-for i in $(ls *_refseq_sighits.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_genus/genus_gene_annotation
-done
-cd $proj_dir/metagenome/sighits/sighits_genus/genus_gene_annotation
-find . -type f -name '*_refseq_sighits.txt' -exec cat {} + > refseq_prehits_temp.txt
-awk -F '\t' '!/abundance/' refseq_prehits_temp.txt > refseq_prehits.txt && rm refseq_prehits_temp.txt
-awk -F '\t' '{print $2, $14}' OFS='\t' refseq_prehits.txt > prehits.txt
-awk -F '\t' '{print $1, $14}' OFS='\t' refseq_hits_genus.txt > hits.txt
-awk -F '\t' 'NR==FNR{c[$1$2]++;next};c[$1$2] > 0' prehits.txt hits.txt > consistent_hits_taxids.txt
-awk -F '\t' '{print $1}' consistent_hits_taxids.txt > consistent_hits.txt && rm consistent_hits_taxids.txt
-for i in $(ls *_refseq_sighits.txt);do
-	awk -F '\t' 'NR==FNR{c[$1]++;next};c[$2] > 0' consistent_hits.txt $i > ${i%*_refseq_sighits.txt}_refseq_filtered.txt
-done
-rm consistent_hits.txt && rm hits.txt && rm prehits.txt && rm refseq_prehits.txt && rm *_refseq_sighits.txt && rm *refseq_hits_genus
-for i in $(ls *_refseq_filtered.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_genus/
-done 
-cd $proj_dir/metagenome/sighits/sighits_genus/
-for i in $(ls *refseq_filtered.txt);do
-	echo $'abundance\tqseqid\tsseqid\tlength\tmismatch\tevalue\tpident\tqcovs\tqseq\tsseq\tstaxids\tstitle\tspecies\tgenus\tfamily\torder\tclass\tphylum\tkingdom\tdomain' | \
-	cat - $i > ${i%*_refseq_filtered.txt}_sighits.txt
-done
-rm *_refseq_filtered.txt
-}
-if [ "$refseq_filter" == "TRUE" ] && [ "$genus_level" == "TRUE" ]; then
-	time genus_refseq_filter 2>> $proj_dir/log.out
-fi
-
-genus_stats(){
 cd $proj_dir/metagenome/sighits/sighits_genus
 echo -e "${YELLOW}- quantifying the genus-level taxonomy"
 awk '{print $1}' rankedlineage_subhits.txt | sort -u > genus_taxa_mean_temp1.txt
@@ -1028,6 +756,11 @@ awk '{print $1}' rankedlineage_subhits.txt | sort -u > genus_taxa_unique_sequenc
 echo -e 'genus' | cat - genus_taxa_unique_sequences_temp1.txt > genus_taxa_unique_sequences_temp.txt && rm genus_taxa_unique_sequences_temp1.txt
 awk '{print $1}' rankedlineage_subhits.txt | sort -u > genus_taxa_quantification_accuracy_temp1.txt
 echo -e 'genus' | cat - genus_taxa_quantification_accuracy_temp1.txt > genus_taxa_quantification_accuracy_temp.txt && rm genus_taxa_quantification_accuracy_temp1.txt 
+}
+if [ "$genus_level" == "TRUE" ]; then
+	time genus_filter 2>> $proj_dir/log.out
+fi
+genus_stats() {
 genus_level=genus
 for i in $(ls *_sighits.txt);do
 	Rscript $tool_dir/Rscripts/stats_summary.R $i $min_uniq $genus_level
@@ -1081,7 +814,7 @@ if [ "$genus_level" == "TRUE" ]; then
 	time genus_stats 2>> $proj_dir/log.out
 fi
 ################################################################################################################
-family_filter(){
+family_filter() {
 cd $proj_dir/metagenome/sighits
 mkdir sighits_family
 cd $proj_dir/metagenome/results
@@ -1253,86 +986,6 @@ for i in $(ls *_complete_family_reads.txt);do
 	echo $'abundance\tqseqid\tsseqid\tlength\tmismatch\tevalue\tpident\tqcovs\tqseq\tsseq\tstaxids\tstitle\tspecies\tgenus\tfamily\torder\tclass\tphylum\tkingdom\tdomain' | \
 	cat - ${i%_complete_family_reads*}_sighits_temp.txt > ${i%_complete_family_reads*}_sighits.txt
 done
-}
-if [ "$family_level" == "TRUE" ]; then
-	time family_filter 2>> $proj_dir/log.out
-fi
-family_refseq_filter(){
-cd $proj_dir/metagenome/sighits/sighits/family
-mkdir family_gene_annotation
-for i in $(ls *_sighits.txt);do
-	cp $i $proj_dir/metagenome/sighits/sighits_family/family_gene_annotation
-done
-cd $proj_dir/metagenome/sighits/sighis_family/family_gene_annotation
-for i in $(ls *_sighits.txt);do
-	awk -F '\t' -v var="${i%*_sighits.txt}" '{print $1"\t"var"_"$2"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"$9"\t"$10"\t"$11"\t"$12"\t"$13"\t"$14"\t"$15"\t"$16"\t"$17"\t"$18"\t"$19"\t"$20}' $i > ${i%*_sighits.txt}_refseq_sighits.txt
-done
-rm *_sighits.txt
-for i in $(ls *_refseq_sighits.txt);do
-	awk 'FNR==NR{ h=$0 }NR>1{ print (!a[$15]++? h ORS $0 : $0) >> $15".txt" }' $i
-done
-
-for i in $(ls *.txt);do
-	sed -i '/^$/d' $i 
-done
-for i in $(ls *_refseq_sighits.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_family
-done
-for i in $(ls *.txt);do
-	awk -F '\t' '{print ">"$2"\n"$9}' $i > ${i%.txt}.fasta
-done
-rm *.txt
-for i in $(ls *.fasta);do
-	$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $refseq_db_dir -num_threads $threads -evalue 1e-10 -max_target_seqs 1 -outfmt "6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" -out ${i%*.fasta}_refseq.megablast
-done
-for i in $(ls *_refseq.megablast);do
-	sort -u $i > ${i%*_refseq.megablast}_refseq_nr.txt
-done
-rm *_refseq.megablast && rm *.fasta
-find . -type f -name '*_refseq_nr.txt' -exec cat {} + > refseq_hits.txt
-awk -F '\t' '{print $10}' OFS=';' refseq_hits.txt > taxids_refseq_inter.txt
-awk -F ';' '{print $1}' OFS='\t' taxids_refseq_inter.txt > taxids_refseq.txt
-rm *_refseq_inter.txt
-for i in $(ls taxids_refseq.txt);do
-	(
-	awk -F '\t' 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' $tool_dir/rankedlineage_edited.dmp OFS='\t' $i> ${i%taxids_refseq*}refseq_inter.txt
-	) &
-	if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
-	wait
-	fi 
-done
-paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11}' OFS='\t' refseq_hits.txt ) <(awk -F '\t' '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' refseq_inter.txt) > refseq_hits_genus.txt
-rm refseq_inter.txt && rm taxids_refseq.txt && rm refseq_hits.txt
-cd $proj_dir/metagenome/sighits/sighits_family/
-for i in $(ls *_refseq_sighits.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_family/family_gene_annotation
-done
-cd $proj_dir/metagenome/sighits/sighits_family/family_gene_annotation
-find . -type f -name '*_refseq_sighits.txt' -exec cat {} + > refseq_prehits_temp.txt
-awk -F '\t' '!/abundance/' refseq_prehits_temp.txt > refseq_prehits.txt && rm refseq_prehits_temp.txt
-awk -F '\t' '{print $2, $14}' OFS='\t' refseq_prehits.txt > prehits.txt
-awk -F '\t' '{print $1, $14}' OFS='\t' refseq_hits_genus.txt > hits.txt
-awk -F '\t' 'NR==FNR{c[$1$2]++;next};c[$1$2] > 0' prehits.txt hits.txt > consistent_hits_taxids.txt
-awk -F '\t' '{print $1}' consistent_hits_taxids.txt > consistent_hits.txt && rm consistent_hits_taxids.txt
-for i in $(ls *_refseq_sighits.txt);do
-	awk -F '\t' 'NR==FNR{c[$1]++;next};c[$2] > 0' consistent_hits.txt $i > ${i%*_refseq_sighits.txt}_refseq_filtered.txt
-done
-rm consistent_hits.txt && rm hits.txt && rm prehits.txt && rm refseq_prehits.txt && rm *_refseq_sighits.txt && rm *refseq_hits_family
-for i in $(ls *_refseq_filtered.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_family/
-done 
-cd $proj_dir/metagenome/sighits/sighits_family/
-for i in $(ls *refseq_filtered.txt);do
-	echo $'abundance\tqseqid\tsseqid\tlength\tmismatch\tevalue\tpident\tqcovs\tqseq\tsseq\tstaxids\tstitle\tspecies\tgenus\tfamily\torder\tclass\tphylum\tkingdom\tdomain' | \
-	cat - $i > ${i%*_refseq_filtered.txt}_sighits.txt
-done
-rm *_refseq_filtered.txt
-}
-if [ "$refseq_filter" == "TRUE" ] && [ "$family_level" == "TRUE" ]; then
-	time family_refseq_filter 2>> $proj_dir/log.out
-fi
-
-family_stats(){
 cd $proj_dir/metagenome/sighits/sighits_family
 echo -e "${YELLOW}- compiling taxonomic information"
 find . -type f -name '*_sighits.txt' -exec cat {} + > sighits.txt
@@ -1349,6 +1002,12 @@ awk '{print $1}' rankedlineage_subhits.txt | sort -u > family_taxa_unique_sequen
 echo -e 'family' | cat - family_taxa_unique_sequences_temp1.txt > family_taxa_unique_sequences_temp.txt && rm family_taxa_unique_sequences_temp1.txt
 awk '{print $1}' rankedlineage_subhits.txt | sort -u > family_taxa_quantification_accuracy_temp1.txt
 echo -e 'family' | cat - family_taxa_quantification_accuracy_temp1.txt > family_taxa_quantification_accuracy_temp.txt && rm family_taxa_quantification_accuracy_temp1.txt 
+}
+if [ "$family_level" == "TRUE" ]; then
+	time family_filter 2>> $proj_dir/log.out
+fi
+
+family_stats() {
 family_level=family
 for i in $(ls *_sighits.txt);do
 	Rscript $tool_dir/Rscripts/stats_summary.R $i $min_uniq $family_level
@@ -1573,87 +1232,6 @@ for i in $(ls *_complete_order_reads.txt);do
 	cat - ${i%_complete_order_reads*}_sighits_temp.txt > ${i%_complete_order_reads*}_sighits.txt
 done
 rm *_complete_order_reads.txt && rm *_sighits_temp.txt && rm *_order_OTU.txt && rm *_unique_reads.txt
-}
-if [ "$order_level" == "TRUE" ]; then
-	time order_filter 2>> $proj_dir/log.out
-fi
-order_refseq_filter(){
-cd $proj_dir/metagenome/sighits/sighits/order
-mkdir order_gene_annotation
-for i in $(ls *_sighits.txt);do
-	cp $i $proj_dir/metagenome/sighits/sighits_order/order_gene_annotation
-done
-cd $proj_dir/metagenome/sighits/sighis_order/order_gene_annotation
-for i in $(ls *_sighits.txt);do
-	awk -F '\t' -v var="${i%*_sighits.txt}" '{print $1"\t"var"_"$2"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"$9"\t"$10"\t"$11"\t"$12"\t"$13"\t"$14"\t"$15"\t"$16"\t"$17"\t"$18"\t"$19"\t"$20}' $i > ${i%*_sighits.txt}_refseq_sighits.txt
-done
-rm *_sighits.txt
-for i in $(ls *_refseq_sighits.txt);do
-	awk 'FNR==NR{ h=$0 }NR>1{ print (!a[$16]++? h ORS $0 : $0) >> $16".txt" }' $i
-done
-
-for i in $(ls *.txt);do
-	sed -i '/^$/d' $i 
-done
-for i in $(ls *_refseq_sighits.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_order
-done
-for i in $(ls *.txt);do
-	awk -F '\t' '{print ">"$2"\n"$9}' $i > ${i%.txt}.fasta
-done
-rm *.txt
-for i in $(ls *.fasta);do
-	$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $refseq_db_dir -num_threads $threads -evalue 1e-10 -max_target_seqs 1 -outfmt "6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" -out ${i%*.fasta}_refseq.megablast
-done
-for i in $(ls *_refseq.megablast);do
-	sort -u $i > ${i%*_refseq.megablast}_refseq_nr.txt
-done
-rm *_refseq.megablast && rm *.fasta
-find . -type f -name '*_refseq_nr.txt' -exec cat {} + > refseq_hits.txt
-awk -F '\t' '{print $10}' OFS=';' refseq_hits.txt > taxids_refseq_inter.txt
-awk -F ';' '{print $1}' OFS='\t' taxids_refseq_inter.txt > taxids_refseq.txt
-rm *_refseq_inter.txt
-for i in $(ls taxids_refseq.txt);do
-	(
-	awk -F '\t' 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' $tool_dir/rankedlineage_edited.dmp OFS='\t' $i> ${i%taxids_refseq*}refseq_inter.txt
-	) &
-	if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
-	wait
-	fi 
-done
-paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11}' OFS='\t' refseq_hits.txt ) <(awk -F '\t' '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' refseq_inter.txt) > refseq_hits_genus.txt
-rm refseq_inter.txt && rm taxids_refseq.txt && rm refseq_hits.txt
-cd $proj_dir/metagenome/sighits/sighits_order/
-for i in $(ls *_refseq_sighits.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_order/order_gene_annotation
-done
-cd $proj_dir/metagenome/sighits/sighits_order/order_gene_annotation
-find . -type f -name '*_refseq_sighits.txt' -exec cat {} + > refseq_prehits_temp.txt
-awk -F '\t' '!/abundance/' refseq_prehits_temp.txt > refseq_prehits.txt && rm refseq_prehits_temp.txt
-awk -F '\t' '{print $2, $14}' OFS='\t' refseq_prehits.txt > prehits.txt
-awk -F '\t' '{print $1, $14}' OFS='\t' refseq_hits_genus.txt > hits.txt
-awk -F '\t' 'NR==FNR{c[$1$2]++;next};c[$1$2] > 0' prehits.txt hits.txt > consistent_hits_taxids.txt
-awk -F '\t' '{print $1}' consistent_hits_taxids.txt > consistent_hits.txt && rm consistent_hits_taxids.txt
-for i in $(ls *_refseq_sighits.txt);do
-	awk -F '\t' 'NR==FNR{c[$1]++;next};c[$2] > 0' consistent_hits.txt $i > ${i%*_refseq_sighits.txt}_refseq_filtered.txt
-done
-rm consistent_hits.txt && rm hits.txt && rm prehits.txt && rm refseq_prehits.txt && rm *_refseq_sighits.txt && rm *refseq_hits_order
-for i in $(ls *_refseq_filtered.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_order/
-done 
-cd $proj_dir/metagenome/sighits/sighits_order/
-for i in $(ls *refseq_filtered.txt);do
-	echo $'abundance\tqseqid\tsseqid\tlength\tmismatch\tevalue\tpident\tqcovs\tqseq\tsseq\tstaxids\tstitle\tspecies\tgenus\tfamily\torder\tclass\tphylum\tkingdom\tdomain' | \
-	cat - $i > ${i%*_refseq_filtered.txt}_sighits.txt
-done
-rm *_refseq_filtered.txt
-}
-if [ "$refseq_filter" == "TRUE" ] && [ "$order_level" == "TRUE" ]; then
-	time order_refseq_filter 2>> $proj_dir/log.out
-fi
-
-
-order_stats(){
 cd $proj_dir/metagenome/sighits/sighits_order
 echo -e "${YELLOW}- compiling taxonomic information"
 find . -type f -name '*_sighits.txt' -exec cat {} + > sighits.txt
@@ -1670,6 +1248,12 @@ awk '{print $1}' rankedlineage_subhits.txt | sort -u > order_taxa_unique_sequenc
 echo -e 'order' | cat - order_taxa_unique_sequences_temp1.txt > order_taxa_unique_sequences_temp.txt && rm order_taxa_unique_sequences_temp1.txt
 awk '{print $1}' rankedlineage_subhits.txt | sort -u > order_taxa_quantification_accuracy_temp1.txt
 echo -e 'order' | cat - order_taxa_quantification_accuracy_temp1.txt > order_taxa_quantification_accuracy_temp.txt && rm order_taxa_quantification_accuracy_temp1.txt
+}
+if [ "$order_level" == "TRUE" ]; then
+	time order_filter 2>> $proj_dir/log.out
+fi
+
+order_stats(){
 order_level=order
 for i in $(ls *_sighits.txt);do
 	Rscript $tool_dir/Rscripts/stats_summary.R $i $min_uniq $order_level
@@ -1723,7 +1307,7 @@ if [ "$order_level" == "TRUE" ]; then
 	time order_stats 2>> $proj_dir/log.out
 fi
 ################################################################################################################
-class_filter(){
+class_filter() {
 cd $proj_dir/metagenome/sighits
 mkdir sighits_class
 cd $proj_dir/metagenome/results
@@ -1894,85 +1478,6 @@ for i in $(ls *_complete_class_reads.txt);do
 	cat - ${i%_complete_class_reads*}_sighits_temp.txt > ${i%_complete_class_reads*}_sighits.txt
 done
 rm *_complete_class_reads.txt && rm *_sighits_temp.txt && rm *_class_OTU.txt && rm *_unique_reads.txt
-}
-if [ "$class_level" == "TRUE" ]; then
-	time class_filter 2>> $proj_dir/log.out
-fi 
-class_refseq_filter(){
-cd $proj_dir/metagenome/sighits/sighits/class
-mkdir class_gene_annotation
-for i in $(ls *_sighits.txt);do
-	cp $i $proj_dir/metagenome/sighits/sighits_class/class_gene_annotation
-done
-cd $proj_dir/metagenome/sighits/sighis_class/class_gene_annotation
-for i in $(ls *_sighits.txt);do
-	awk -F '\t' -v var="${i%*_sighits.txt}" '{print $1"\t"var"_"$2"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"$9"\t"$10"\t"$11"\t"$12"\t"$13"\t"$14"\t"$15"\t"$16"\t"$17"\t"$18"\t"$19"\t"$20}' $i > ${i%*_sighits.txt}_refseq_sighits.txt
-done
-rm *_sighits.txt
-for i in $(ls *_refseq_sighits.txt);do
-	awk 'FNR==NR{ h=$0 }NR>1{ print (!a[$17]++? h ORS $0 : $0) >> $17".txt" }' $i
-done
-
-for i in $(ls *.txt);do
-	sed -i '/^$/d' $i 
-done
-for i in $(ls *_refseq_sighits.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_class
-done
-for i in $(ls *.txt);do
-	awk -F '\t' '{print ">"$2"\n"$9}' $i > ${i%.txt}.fasta
-done
-rm *.txt
-for i in $(ls *.fasta);do
-	$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $refseq_db_dir -num_threads $threads -evalue 1e-10 -max_target_seqs 1 -outfmt "6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" -out ${i%*.fasta}_refseq.megablast
-done
-for i in $(ls *_refseq.megablast);do
-	sort -u $i > ${i%*_refseq.megablast}_refseq_nr.txt
-done
-rm *_refseq.megablast && rm *.fasta
-find . -type f -name '*_refseq_nr.txt' -exec cat {} + > refseq_hits.txt
-awk -F '\t' '{print $10}' OFS=';' refseq_hits.txt > taxids_refseq_inter.txt
-awk -F ';' '{print $1}' OFS='\t' taxids_refseq_inter.txt > taxids_refseq.txt
-rm *_refseq_inter.txt
-for i in $(ls taxids_refseq.txt);do
-	(
-	awk -F '\t' 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' $tool_dir/rankedlineage_edited.dmp OFS='\t' $i> ${i%taxids_refseq*}refseq_inter.txt
-	) &
-	if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
-	wait
-	fi 
-done
-paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11}' OFS='\t' refseq_hits.txt ) <(awk -F '\t' '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' refseq_inter.txt) > refseq_hits_genus.txt
-rm refseq_inter.txt && rm taxids_refseq.txt && rm refseq_hits.txt
-cd $proj_dir/metagenome/sighits/sighits_class/
-for i in $(ls *_refseq_sighits.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_class/class_gene_annotation
-done
-cd $proj_dir/metagenome/sighits/sighits_class/class_gene_annotation
-find . -type f -name '*_refseq_sighits.txt' -exec cat {} + > refseq_prehits_temp.txt
-awk -F '\t' '!/abundance/' refseq_prehits_temp.txt > refseq_prehits.txt && rm refseq_prehits_temp.txt
-awk -F '\t' '{print $2, $14}' OFS='\t' refseq_prehits.txt > prehits.txt
-awk -F '\t' '{print $1, $14}' OFS='\t' refseq_hits_genus.txt > hits.txt
-awk -F '\t' 'NR==FNR{c[$1$2]++;next};c[$1$2] > 0' prehits.txt hits.txt > consistent_hits_taxids.txt
-awk -F '\t' '{print $1}' consistent_hits_taxids.txt > consistent_hits.txt && rm consistent_hits_taxids.txt
-for i in $(ls *_refseq_sighits.txt);do
-	awk -F '\t' 'NR==FNR{c[$1]++;next};c[$2] > 0' consistent_hits.txt $i > ${i%*_refseq_sighits.txt}_refseq_filtered.txt
-done
-rm consistent_hits.txt && rm hits.txt && rm prehits.txt && rm refseq_prehits.txt && rm *_refseq_sighits.txt && rm *refseq_hits_class
-for i in $(ls *_refseq_filtered.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_class/
-done 
-cd $proj_dir/metagenome/sighits/sighits_class/
-for i in $(ls *refseq_filtered.txt);do
-	echo $'abundance\tqseqid\tsseqid\tlength\tmismatch\tevalue\tpident\tqcovs\tqseq\tsseq\tstaxids\tstitle\tspecies\tgenus\tfamily\torder\tclass\tphylum\tkingdom\tdomain' | \
-	cat - $i > ${i%*_refseq_filtered.txt}_sighits.txt
-done
-rm *_refseq_filtered.txt
-}
-if [ "$refseq_filter" == "TRUE" ] && [ "$class_level" == "TRUE" ]; then
-	time class_refseq_filter 2>> $proj_dir/log.out
-fi
-class_stats(){
 cd $proj_dir/metagenome/sighits/sighits_class
 echo -e "${YELLOW}- compiling taxonomic information"
 find . -type f -name '*_sighits.txt' -exec cat {} + > sighits.txt
@@ -1989,6 +1494,11 @@ awk '{print $1}' rankedlineage_subhits.txt | sort -u > class_taxa_unique_sequenc
 echo -e 'class' | cat - class_taxa_unique_sequences_temp1.txt > class_taxa_unique_sequences_temp.txt && rm class_taxa_unique_sequences_temp1.txt
 awk '{print $1}' rankedlineage_subhits.txt | sort -u > class_taxa_quantification_accuracy_temp1.txt
 echo -e 'class' | cat - class_taxa_quantification_accuracy_temp1.txt > class_taxa_quantification_accuracy_temp.txt && rm class_taxa_quantification_accuracy_temp1.txt
+}
+if [ "$class_level" == "TRUE" ]; then
+	time class_filter 2>> $proj_dir/log.out
+fi 
+class_stats(){
 class_level=class
 for i in $(ls *_sighits.txt);do
 	Rscript $tool_dir/Rscripts/stats_summary.R $i $min_uniq $class_level
@@ -2042,7 +1552,7 @@ if [ "$class_level" == "TRUE" ]; then
 	time class_stats 2>> $proj_dir/log.out
 fi
 
-phylum_filter(){
+phylum_filter() {
 cd $proj_dir/metagenome/sighits
 mkdir sighits_phylum
 cd $proj_dir/metagenome/results
@@ -2234,81 +1744,7 @@ echo -e 'phylum' | cat - phylum_taxa_quantification_accuracy_temp1.txt > phylum_
 if [ "$phylum_level" == "TRUE" ]; then
 	time phylum_filter 2>> $proj_dir/log.out
 fi
-phylum_refseq_filter(){
-cd $proj_dir/metagenome/sighits/sighits/phylum
-mkdir phylum_gene_annotation
-for i in $(ls *_sighits.txt);do
-	cp $i $proj_dir/metagenome/sighits/sighits_phylum/phylum_gene_annotation
-done
-cd $proj_dir/metagenome/sighits/sighis_phylum/phylum_gene_annotation
-for i in $(ls *_sighits.txt);do
-	awk -F '\t' -v var="${i%*_sighits.txt}" '{print $1"\t"var"_"$2"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7"\t"$8"\t"$9"\t"$10"\t"$11"\t"$12"\t"$13"\t"$14"\t"$15"\t"$16"\t"$17"\t"$18"\t"$19"\t"$20}' $i > ${i%*_sighits.txt}_refseq_sighits.txt
-done
-rm *_sighits.txt
-for i in $(ls *_refseq_sighits.txt);do
-	awk 'FNR==NR{ h=$0 }NR>1{ print (!a[$18]++? h ORS $0 : $0) >> $18".txt" }' $i
-done
-
-for i in $(ls *.txt);do
-	sed -i '/^$/d' $i 
-done
-for i in $(ls *_refseq_sighits.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_phylum
-done
-for i in $(ls *.txt);do
-	awk -F '\t' '{print ">"$2"\n"$9}' $i > ${i%.txt}.fasta
-done
-rm *.txt
-for i in $(ls *.fasta);do
-	$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $refseq_db_dir -num_threads $threads -evalue 1e-10 -max_target_seqs 1 -outfmt "6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" -out ${i%*.fasta}_refseq.megablast
-done
-for i in $(ls *_refseq.megablast);do
-	sort -u $i > ${i%*_refseq.megablast}_refseq_nr.txt
-done
-rm *_refseq.megablast && rm *.fasta
-find . -type f -name '*_refseq_nr.txt' -exec cat {} + > refseq_hits.txt
-awk -F '\t' '{print $10}' OFS=';' refseq_hits.txt > taxids_refseq_inter.txt
-awk -F ';' '{print $1}' OFS='\t' taxids_refseq_inter.txt > taxids_refseq.txt
-rm *_refseq_inter.txt
-for i in $(ls taxids_refseq.txt);do
-	(
-	awk -F '\t' 'NR==FNR{a[$1]=$0;next} ($1) in a{print a[$1]}' $tool_dir/rankedlineage_edited.dmp OFS='\t' $i> ${i%taxids_refseq*}refseq_inter.txt
-	) &
-	if [[ $(jobs -r -p | wc -l) -gt $N ]]; then
-	wait
-	fi 
-done
-paste <(awk -F '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11}' OFS='\t' refseq_hits.txt ) <(awk -F '\t' '{print $2, $3, $4, $5, $6, $7, $8, $9, $10}' OFS='\t' refseq_inter.txt) > refseq_hits_genus.txt
-rm refseq_inter.txt && rm taxids_refseq.txt && rm refseq_hits.txt
-cd $proj_dir/metagenome/sighits/sighits_phylum/
-for i in $(ls *_refseq_sighits.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_phylum/phylum_gene_annotation
-done
-cd $proj_dir/metagenome/sighits/sighits_phylum/phylum_gene_annotation
-find . -type f -name '*_refseq_sighits.txt' -exec cat {} + > refseq_prehits_temp.txt
-awk -F '\t' '!/abundance/' refseq_prehits_temp.txt > refseq_prehits.txt && rm refseq_prehits_temp.txt
-awk -F '\t' '{print $2, $14}' OFS='\t' refseq_prehits.txt > prehits.txt
-awk -F '\t' '{print $1, $14}' OFS='\t' refseq_hits_genus.txt > hits.txt
-awk -F '\t' 'NR==FNR{c[$1$2]++;next};c[$1$2] > 0' prehits.txt hits.txt > consistent_hits_taxids.txt
-awk -F '\t' '{print $1}' consistent_hits_taxids.txt > consistent_hits.txt && rm consistent_hits_taxids.txt
-for i in $(ls *_refseq_sighits.txt);do
-	awk -F '\t' 'NR==FNR{c[$1]++;next};c[$2] > 0' consistent_hits.txt $i > ${i%*_refseq_sighits.txt}_refseq_filtered.txt
-done
-rm consistent_hits.txt && rm hits.txt && rm prehits.txt && rm refseq_prehits.txt && rm *_refseq_sighits.txt && rm *refseq_hits_phylum
-for i in $(ls *_refseq_filtered.txt);do
-	mv $i $proj_dir/metagenome/sighits/sighits_phylum/
-done 
-cd $proj_dir/metagenome/sighits/sighits_phylum/
-for i in $(ls *refseq_filtered.txt);do
-	echo $'abundance\tqseqid\tsseqid\tlength\tmismatch\tevalue\tpident\tqcovs\tqseq\tsseq\tstaxids\tstitle\tspecies\tgenus\tfamily\torder\tclass\tphylum\tkingdom\tdomain' | \
-	cat - $i > ${i%*_refseq_filtered.txt}_sighits.txt
-done
-rm *_refseq_filtered.txt
-}
-if [ "$refseq_filter" == "TRUE" ] && [ "$phylum_level" == "TRUE" ]; then
-	time phylum_refseq_filter 2>> $proj_dir/log.out
-fi
-phylum_stats(){
+phylum_stats()
 phylum_level=phylum
 for i in $(ls *_sighits.txt);do
 	Rscript $tool_dir/Rscripts/stats_summary.R $i $min_uniq $phylum_level
