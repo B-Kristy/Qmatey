@@ -219,10 +219,7 @@ cd $proj_dir/metagenome/haplotig
 if [ "$blast_location" == "LOCAL" ]; then
 echo -e "${YELLOW}- preforming a local BLAST"
 	for i in $(ls *_haplotig.fasta);do
-
-		$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $local_db_dir -num_threads $threads -evalue 1e-12 -perc_identity 95 -outfmt \
-		"6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" \
-		-out ../alignment/${i%_haplotig*}_haplotig.megablast
+		$tool_dir/ncbi-blast-2.8.1+/bin/blastn -task megablast -query $i -db $local_db_dir -num_threads $threads -evalue 1e-12 -perc_identity 95 -outfmt "6 qseqid sseqid length mismatch evalue pident qcovs qseq sseq staxids stitle" -out ../alignment/${i%_haplotig*}_haplotig.megablast
 	done
 	for i in $(ls *_haplotig.megablast);do
 		sort -u $i > ${i%_haplotig*}_haplotig_nd.megablast && rm *_haplotig.megablast
